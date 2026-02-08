@@ -1,0 +1,57 @@
+#ifndef DISK_OPERATOR
+#define DISK_OPERATOR
+
+#include <cstdio>
+#include <cstring>
+#include <fcntl.h>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <vector>
+
+class Disk_operator {
+private:
+  FILE *db_file;
+  int PAGE_SIZE;
+
+public:
+  Disk_operator(const std::string &filename, int page_size) {
+
+    db_file = fopen(filename.c_str(), "r+b");
+    if (!db_file) {
+      db_file = fopen(filename.c_str(), "w+b");
+    }
+    PAGE_SIZE = page_size;
+  }
+
+  void read_page(int pid, char *buffer) {
+    int offset = pid * PAGE_SIZE;
+    fseek(db_file, offset, SEEK_SET);
+    if (fread(buffer, PAGE_SIZE, 1, db_file) == -1) {
+      throw std::runtime_error("Could not read page");
+    };
+    std::cout << "\nRead a page\n";
+  }
+
+  void write_page(int pid, bool &dirty_bit, const char *write_data) {
+    int offset = pid * PAGE_SIZE;
+    fseek(db_file, offset, SEEK_SET);
+    if (fwrite(write_data, PAGE_SIZE, 1, db_file) == -1) {
+      throw std::runtime_error("Could not write page");
+    }
+    if (dirty_bit) {
+      dirty_bit = false;
+      fflush(db_file);
+    }
+  }
+  ~Disk_operator() {
+    if (db_file) {
+      fclose(db_file);
+    }
+  }
+};
+
+#endif
