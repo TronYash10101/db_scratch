@@ -10,10 +10,10 @@
 namespace access_methods {
 constexpr int MAX_SLOTS = 10;
 
-typedef struct {
-  int x;
-  int y;
-} row_t;
+struct row_t {
+  int x = 0;
+  int y = 0;
+};
 
 typedef enum { X, Y } col_type;
 typedef enum { EQ, GT, LS } op_type;
@@ -21,7 +21,7 @@ typedef enum { EQ, GT, LS } op_type;
 struct SARG {
   col_type col;
   op_type op;
-  char constant;
+  int constant;
 
   bool match(const row_t &match_to_row) const {
     int value = (col == X) ? match_to_row.x : match_to_row.y;
@@ -35,21 +35,20 @@ struct SARG {
     }
   };
 };
-typedef struct {
-  uint8_t h_offset; // free space offset
-  uint8_t slot_count;
-} PageHeader;
+struct PageHeader {
+  uint8_t slot_count = 0;
+};
 
-typedef struct {
-  uint8_t primary_key;
-  uint16_t slot_size;
+struct Slot {
+  // uint8_t primary_key;
+  std::size_t slot_size;
   uint16_t slot_offset;
-} Slot;
+};
 
 struct HeapPage {
   PageHeader page_header;
   Slot slots[MAX_SLOTS];
-  char data[page_size];
+  char data[page_data_size];
 };
 
 class HeapTable {

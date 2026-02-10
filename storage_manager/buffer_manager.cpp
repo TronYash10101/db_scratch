@@ -1,5 +1,6 @@
 #include "headers/buffer_manager.hpp"
 #include "headers/disk_operator.hpp"
+#include <cstring>
 #include <iostream>
 #include <stdexcept>
 
@@ -59,6 +60,7 @@ frame_id buffer_manager::buffer_pool::page_replacement_policy() {
       auto it = page_table.find(frames[id].page_id);
 
       if (it != page_table.end()) {
+        // write data here
         disk_operator.write_page(it->first, frames[id].dirty_bit,
                                  frames[id].page_data);
         page_table.erase(it->first);
