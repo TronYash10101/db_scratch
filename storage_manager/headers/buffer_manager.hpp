@@ -15,7 +15,7 @@
 
 constexpr std::size_t page_data_size = 4096;
 constexpr std::size_t page_size =
-    page_data_size + 41; // look out for hardcoding
+    page_data_size + 65; // look out for hardcoding
 constexpr std::size_t buffer_size = 16;
 constexpr std::size_t MAX_PAGES = 32;
 typedef size_t page_id;

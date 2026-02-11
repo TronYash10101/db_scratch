@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
+#include <optional>
+#include <stdexcept>
 #include <vector>
 
 namespace access_methods {
@@ -29,19 +31,21 @@ struct SARG {
     case EQ:
       return (value == constant);
     case GT:
-      return (value >= constant);
+      return (value > constant);
     case LS:
-      return (value <= constant);
+      return (value < constant);
+    default:
+      return false;
     }
   };
 };
 struct PageHeader {
-  uint8_t slot_count = 0;
+  int free_offset = page_data_size;
+  uint16_t slot_count = 0;
 };
 
 struct Slot {
-  // uint8_t primary_key;
-  std::size_t slot_size;
+  int slot_size;
   uint16_t slot_offset;
 };
 
@@ -50,6 +54,11 @@ struct HeapPage {
   Slot slots[MAX_SLOTS];
   char data[page_data_size];
 };
+
+typedef struct {
+  page_id pid;
+  Slot slot;
+} RID;
 
 class HeapTable {
 private:
@@ -61,7 +70,10 @@ public:
   // Only scans the heap page for matching tuple, if found return an iterator
   // to it else NULL (Don't try to mix data storing logic here, assume correct
   // is present)
-  row_t *heap_scan(buffer_manager::buffer_pool &buff_pool, SARG sarg);
+  std::optional<RID> heap_scan(buffer_manager::buffer_pool &buff_pool,
+                               SARG sarg);
+
+  void heap_table_push(page_id pid);
 };
 
 } // namespace access_methods

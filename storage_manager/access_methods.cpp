@@ -1,34 +1,40 @@
 #include "headers/access_methods.hpp"
-#include <stdexcept>
+#include <cstdio>
+#include <iostream>
 
-access_methods::HeapTable::HeapTable() : Table(MAX_PAGES) {}
+access_methods::HeapTable::HeapTable() : Table() {}
 
-access_methods::row_t *
+std::optional<access_methods::RID>
 access_methods::HeapTable::heap_scan(buffer_manager::buffer_pool &buff_pool,
                                      SARG sarg) {
 
-  for (auto id = Table.begin(); id < Table.end(); id++) {
-    if (id != Table.end()) {
-      char *heap_page_data = buff_pool.page_access(*id)->page_data;
-      HeapPage *heap_page = reinterpret_cast<HeapPage *>(heap_page_data);
+  for (auto it = Table.begin(); it != Table.end(); ++it) {
+    page_id pid = *it;
+    char *heap_page_data = buff_pool.page_access(pid)->page_data;
+    HeapPage *heap_page = reinterpret_cast<HeapPage *>(heap_page_data);
+    // iterate each tuple and if tuple satisfies SARG return
+    for (int slot = 0; slot < heap_page->page_header.slot_count; slot++) {
+      uint16_t size = heap_page->slots[slot].slot_size;
+      uint16_t offset = heap_page->slots[slot].slot_offset;
 
-      // iterate each tuple and if tuple satisfies SARG return
-      for (int x = 0; x < heap_page->page_header.slot_count; x++) {
-        uint16_t size = heap_page->slots[x].slot_size;
-        uint16_t offset = heap_page->slots[x].slot_offset;
-        // read
-        row_t *match_to_row =
-            reinterpret_cast<row_t *>(heap_page_data + offset);
-        if (sarg.match(*match_to_row)) {
-          return match_to_row;
-        } else {
-          continue;
-        };
-      }
-      buff_pool.un_pin(*id);
-    } else {
-      throw std::runtime_error("Could Not Find Specified Page");
+      // read
+      row_t *match_to_row = reinterpret_cast<row_t *>(heap_page->data + offset);
+      if (sarg.match(*match_to_row) == true) {
+        RID row_id;
+        row_id.pid = pid;
+        row_id.slot = heap_page->slots[slot];
+        buff_pool.un_pin(pid);
+        return row_id;
+      } else {
+        std::cout << "No rid ";
+        continue;
+      };
     }
+    buff_pool.un_pin(pid);
   }
-  return NULL;
+  return std::nullopt;
+}
+
+void access_methods::HeapTable::heap_table_push(page_id pid) {
+  Table.push_back(pid);
 }
