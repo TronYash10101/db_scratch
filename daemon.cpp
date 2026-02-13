@@ -1,4 +1,5 @@
 #include "storage_manager/headers/writer.hpp"
+#include <cstdio>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -22,25 +23,20 @@ int main() {
 
     heap_page_t->page_header.slot_count = 0;
     heap_page_t->page_header.free_offset = page_data_size;
-    /*access_methods::row_t row2 = {4, 5};
-    write_page(page->page_data, row2);
-
-    access_methods::HeapPage *hp =
-        reinterpret_cast<access_methods::HeapPage *>(page->page_data);
-
-    std::cout << "slot_count = " << hp->page_header.slot_count << "\n";
-    std::cout << "free_offset = " << hp->page_header.free_offset << "\n";
-
-    for (int i = 0; i < hp->page_header.slot_count; i++) {
-      uint16_t off = hp->slots[i].slot_offset;
-      access_methods::row_t *r =
-          reinterpret_cast<access_methods::row_t *>(page->page_data + off);
-      std::cout << "row[" << i << "] = {" << r->x << ", " << r->y << "}\n";
-    } */
 
     access_methods::row_t row1 = {2, 7};
 
     write_page(page->page_data, row1);
+
+    /* access_methods::HeapPage *test =
+        reinterpret_cast<access_methods::HeapPage *>(page->page_data);
+
+    int off = test->slots[0].slot_offset;
+
+    access_methods::row_t *r =
+        reinterpret_cast<access_methods::row_t *>(test->data + off);
+
+    std::cout << "After write -> " << r->x << "," << r->y << "\n"; */
 
     access_methods::SARG s1 = {access_methods::X, access_methods::EQ, 2};
     std::optional<access_methods::RID> res =
@@ -53,12 +49,13 @@ int main() {
 
       access_methods::row_t *pd = reinterpret_cast<access_methods::row_t *>(
           hp->data + res->slot.slot_offset);
-      std::cout << pd->x << pd->y;
+      std::cout << "x: " << pd->x << "y: " << pd->y;
     } else {
       std::cout << "No match found";
     }
   } else {
     std::cout << "Path does not exists";
   }
+  // scanf("%d", NULL);
   return 0;
 }

@@ -25,14 +25,19 @@ struct SARG {
   op_type op;
   int constant;
 
-  bool match(const row_t &match_to_row) const {
+  bool match(row_t &match_to_row) const {
     int value = (col == X) ? match_to_row.x : match_to_row.y;
+    std::cout << " match value " << value;
     switch (op) {
     case EQ:
+      std::cout << " equality condition " << (value == constant) << "eq";
+      std::cout << " constwx " << constant;
       return (value == constant);
     case GT:
+      std::cout << " equality condition " << (value > constant) << "gt";
       return (value > constant);
     case LS:
+      std::cout << " equality condition " << (value < constant) << "ls";
       return (value < constant);
     default:
       return false;
@@ -47,6 +52,7 @@ struct PageHeader {
 struct Slot {
   int slot_size;
   uint16_t slot_offset;
+  bool deleted = false;
 };
 
 struct HeapPage {
@@ -74,6 +80,7 @@ public:
                                SARG sarg);
 
   void heap_table_push(page_id pid);
+  void delete_slot(buffer_manager::buffer_pool &buff_pool, RID rid);
 };
 
 } // namespace access_methods

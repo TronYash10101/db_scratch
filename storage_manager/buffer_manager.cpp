@@ -32,7 +32,8 @@ buffer_manager::Page *buffer_manager::buffer_pool::page_access(page_id pid) {
   }
   frame_id free_frame_id = page_replacement_policy();
   std::cout << "Page Replaced Successfully";
-  return page_access(free_frame_id);
+  frames[free_frame_id].page_id = pid;
+  return &frames[free_frame_id];
 }
 
 void buffer_manager::buffer_pool::un_pin(int pid) {
@@ -62,9 +63,10 @@ frame_id buffer_manager::buffer_pool::page_replacement_policy() {
 
       if (it != page_table.end()) {
         // write data here
-        write_page(frames[id].page_data, {(int)id + 1, (int)id + 2});
-        disk_operator.write_page(it->first, frames[id].dirty_bit,
-                                 frames[id].page_data);
+        if (frames[id].dirty_bit) {
+          disk_operator.write_page(it->first, frames[id].dirty_bit,
+                                   frames[id].page_data);
+        }
         page_table.erase(it->first);
       }
 
