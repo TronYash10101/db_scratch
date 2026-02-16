@@ -1,50 +1,38 @@
 #include "headers/writer.hpp"
 #include <cstdio>
+#include <cstring>
 #include <iostream>
+#include <stdexcept>
 
-void write_page(char *raw_buffer, const access_methods::row_t &row) {
+void heap_write(char *raw_buffer, const access_methods::row_t &row) {
 
-  if (raw_buffer == NULL) {
-    throw std::runtime_error("NULL buffer recieved by writer");
+  HeapPage *heap_page = reinterpret_cast<HeapPage *>(raw_buffer);
+
+  if (heap_page->page_header.free_size == page_data_size) {
+    heap_page->initialize();
   }
 
-  access_methods::HeapPage *abstract_page =
-      reinterpret_cast<access_methods::HeapPage *>(raw_buffer);
-
-  if (abstract_page->page_header.slot_count >= access_methods::MAX_SLOTS) {
-    throw std::runtime_error("no free slots");
-  }
-
-  abstract_page->page_header.slot_count += 1;
-
-  // shifted offset
-  if (sizeof(row) <= abstract_page->page_header.free_offset) {
-    abstract_page->page_header.free_offset -= sizeof(row);
+  // header fill
+  if (heap_page->page_header.slot_count < MAX_SLOTS) {
+    heap_page->page_header.slot_count += 1;
   } else {
-    throw std::runtime_error(
-        "Remaining Free Size: " +
-        std::to_string(abstract_page->page_header.free_offset));
+    throw std::runtime_error("Slots Full");
   }
 
-  // filling slot
-  abstract_page->slots[abstract_page->page_header.slot_count - 1].slot_size =
+  // Slot fill
+  heap_page->slots[heap_page->page_header.slot_count - 1].slot_size =
       sizeof(row);
-  abstract_page->slots[abstract_page->page_header.slot_count - 1].slot_offset =
-      abstract_page->page_header.free_offset;
 
-  // copying row
-  if ((abstract_page->slots[abstract_page->page_header.slot_count - 1]
-               .deleted == true &&
-       abstract_page->slots[abstract_page->page_header.slot_count - 1]
-               .slot_size == sizeof(row)) ||
-      abstract_page->slots[abstract_page->page_header.slot_count - 1].deleted ==
-          false) {
+  heap_page->page_header.free_size -= sizeof(row);
 
-    memcpy(abstract_page->data +
-               abstract_page->slots[abstract_page->page_header.slot_count - 1]
-                   .slot_offset,
-           &row, sizeof(row));
-  } else {
-    throw std::runtime_error("Error copying row");
-  }
+  heap_page->slots[heap_page->page_header.slot_count - 1].slot_offset =
+      heap_page->page_header.free_size;
+
+  heap_page->slots[heap_page->page_header.slot_count - 1].deleted = false;
+
+  // Data fill
+  memcpy(
+      heap_page->data +
+          heap_page->slots[heap_page->page_header.slot_count - 1].slot_offset,
+      &row, sizeof(access_methods::row_t));
 }

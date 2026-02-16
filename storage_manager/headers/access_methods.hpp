@@ -10,7 +10,6 @@
 #include <vector>
 
 namespace access_methods {
-constexpr int MAX_SLOTS = 10;
 
 struct row_t {
   int x = 0;
@@ -27,38 +26,17 @@ struct SARG {
 
   bool match(row_t &match_to_row) const {
     int value = (col == X) ? match_to_row.x : match_to_row.y;
-    std::cout << " match value " << value;
     switch (op) {
     case EQ:
-      std::cout << " equality condition " << (value == constant) << "eq";
-      std::cout << " constwx " << constant;
       return (value == constant);
     case GT:
-      std::cout << " equality condition " << (value > constant) << "gt";
       return (value > constant);
     case LS:
-      std::cout << " equality condition " << (value < constant) << "ls";
       return (value < constant);
     default:
       return false;
     }
   };
-};
-struct PageHeader {
-  int free_offset = page_data_size;
-  uint16_t slot_count = 0;
-};
-
-struct Slot {
-  int slot_size;
-  uint16_t slot_offset;
-  bool deleted = false;
-};
-
-struct HeapPage {
-  PageHeader page_header;
-  Slot slots[MAX_SLOTS];
-  char data[page_data_size];
 };
 
 typedef struct {

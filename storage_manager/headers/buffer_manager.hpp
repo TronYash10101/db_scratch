@@ -13,9 +13,39 @@
 #include <unordered_map>
 #include <vector>
 
+// single page size
 constexpr std::size_t page_data_size = 4096;
-constexpr std::size_t page_size =
-    page_data_size + 65; // look out for hardcoding
+constexpr int MAX_SLOTS = 10;
+#pragma pack(push, 1)
+struct PageHeader {
+  int free_size = page_data_size;
+  int slot_count = 0;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct Slot {
+  int slot_size;
+  uint16_t slot_offset;
+  bool deleted = false;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct HeapPage {
+  PageHeader page_header;
+  Slot slots[MAX_SLOTS];
+  char data[page_data_size];
+
+  // Just because of raw pointer operation
+  void initialize() {
+    page_header.free_size = page_data_size;
+    page_header.slot_count = 0;
+  }
+};
+#pragma pack(pop)
+constexpr std::size_t page_size = sizeof(HeapPage);
+
 constexpr std::size_t buffer_size = 16;
 constexpr std::size_t MAX_PAGES = 32;
 typedef size_t page_id;

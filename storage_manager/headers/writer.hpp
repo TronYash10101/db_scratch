@@ -5,5 +5,5 @@
 #include <cstring>
 #include <stdexcept>
 
-void write_page(char *raw_buffer, const access_methods::row_t &row);
+void heap_write(char *raw_buffer, const access_methods::row_t &row);
 #endif

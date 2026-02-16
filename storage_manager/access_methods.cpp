@@ -24,7 +24,6 @@ access_methods::HeapTable::heap_scan(buffer_manager::buffer_pool &buff_pool,
 
       uint16_t size = heap_page->slots[slot].slot_size;
       uint16_t offset = heap_page->slots[slot].slot_offset;
-
       // read
       row_t *match_to_row = reinterpret_cast<row_t *>(heap_page->data + offset);
       if (sarg.match(*match_to_row)) {
@@ -56,7 +55,7 @@ void access_methods::HeapTable::delete_slot(
 
   Slot *del_slot = reinterpret_cast<Slot *>(heap_page_data->data + offset);
 
-  if (del_slot->deleted != false) {
+  if (del_slot->deleted != true) {
     del_slot->deleted = true;
   } else {
     throw std::runtime_error("Already Deleted(double delete)");
