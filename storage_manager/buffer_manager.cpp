@@ -10,7 +10,7 @@ buffer_manager::buffer_pool::buffer_pool(const std::string &db_filename, const s
     std::cout << "\nBUFFER CREATED\n";
 }
 
-buffer_manager_types::Page *buffer_manager::buffer_pool::page_access(heap_page_types::page_id pid) {
+buffer_manager_types::Page *buffer_manager::buffer_pool::page_access(heap_page_types::page_id pid, diskoperator_types::page_type type) {
     auto page = page_table.find(pid);
     if (page != page_table.end()) {
         frames[page->second].pin_count += 1;
@@ -22,6 +22,7 @@ buffer_manager_types::Page *buffer_manager::buffer_pool::page_access(heap_page_t
             if (frames[i].page_id == buffer_manager_types::INVALID_PAGE_ID) {
                 frames[i].page_id = pid;
                 frames[i].pin_count = 1;
+                frames[i].type = type;
                 page_table[pid] = i;
                 replacement_check_queue.push(i);
                 disk_operator.read_page(pid, frames[i].page_data, diskoperator_types::HEAP_PAGE);
@@ -30,7 +31,7 @@ buffer_manager_types::Page *buffer_manager::buffer_pool::page_access(heap_page_t
             }
         }
     }
-    buffer_manager_types::frame_id free_frame_id = page_replacement_policy();
+    buffer_manager_types::frame_id free_frame_id = page_replacement_policy(type);
     std::cout << "Page Replaced Successfully";
     frames[free_frame_id].page_id = pid;
     return &frames[free_frame_id];
@@ -53,7 +54,7 @@ void buffer_manager::buffer_pool::un_pin(int pid) {
     }
 }
 
-buffer_manager_types::frame_id buffer_manager::buffer_pool::page_replacement_policy() {
+buffer_manager_types::frame_id buffer_manager::buffer_pool::page_replacement_policy(diskoperator_types::page_type type) {
     int idx;
     for (idx = 0; idx < replacement_check_queue.size(); idx++) {
         buffer_manager_types::frame_id id = replacement_check_queue.front();
@@ -64,7 +65,7 @@ buffer_manager_types::frame_id buffer_manager::buffer_pool::page_replacement_pol
             if (it != page_table.end()) {
                 // write data here
                 if (frames[id].dirty_bit) {
-                    disk_operator.write_page(it->first, frames[id].dirty_bit, frames[id].page_data);
+                    disk_operator.write_page(it->first, frames[id].dirty_bit, frames[id].page_data, type);
                 }
                 page_table.erase(it->first);
             }

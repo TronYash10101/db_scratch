@@ -33,7 +33,8 @@ void heap_write(char *raw_buffer, const access_methods_types::row_t &row) {
            sizeof(access_methods_types::row_t));
 }
 void delete_slot(buffer_manager::buffer_pool &buff_pool, heap_page_types::RID rid) {
-    heap_page_types::HeapPage *heap_page_data = reinterpret_cast<heap_page_types::HeapPage *>(buff_pool.page_access(rid.pid)->page_data);
+    heap_page_types::HeapPage *heap_page_data =
+            reinterpret_cast<heap_page_types::HeapPage *>(buff_pool.page_access(rid.pid, diskoperator_types::HEAP_PAGE)->page_data);
 
     uint16_t offset = rid.slot.slot_offset;
 

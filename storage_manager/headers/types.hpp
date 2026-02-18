@@ -4,6 +4,13 @@
 #include <iostream>
 #include <stdint.h>
 
+// namespace diskoperator_types
+namespace diskoperator_types {
+
+enum page_type { HEAP_PAGE, INDEX_PAGE };
+
+}
+
 // namespace buffer_manager_types
 namespace buffer_manager_types {
 
@@ -20,6 +27,7 @@ struct Page {
     size_t page_id = INVALID_PAGE_ID; // gives the max value of size_t
     bool dirty_bit = false;
     int pin_count = 0;
+    diskoperator_types::page_type type;
 };
 
 } // namespace buffer_manager_types
@@ -91,13 +99,6 @@ struct Internal_Node {
 #pragma pack(pop)
 
 } // namespace btree_page_types
-
-// namespace diskoperator_types
-namespace diskoperator_types {
-
-enum page_type { HEAP_PAGE, INDEX_PAGE };
-
-}
 
 // namespace access_methods_types
 namespace access_methods_types {

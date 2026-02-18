@@ -11,7 +11,7 @@ std::optional<heap_page_types::RID> access_methods::Access_methods::heap_scan(bu
 
     for (auto it = HeapTable.begin(); it != HeapTable.end(); ++it) {
         heap_page_types::page_id pid = *it;
-        char *heap_page_data = buff_pool.page_access(pid)->page_data;
+        char *heap_page_data = buff_pool.page_access(pid, diskoperator_types::HEAP_PAGE)->page_data;
         heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(heap_page_data);
 
         // iterate each tuple and if tuple satisfies SARG return
