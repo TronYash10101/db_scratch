@@ -1,6 +1,7 @@
 #ifndef DISK_OPERATOR
 #define DISK_OPERATOR
 
+#include "types.hpp"
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
@@ -10,9 +11,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <utility>
 #include <vector>
-
-enum page_type { HEAP_PAGE, INDEX_PAGE };
 
 class Disk_operator {
   private:
@@ -34,29 +34,33 @@ class Disk_operator {
         PAGE_SIZE = page_size;
     }
 
-    void read_page(int pid, char *buffer, page_type type) {
+    void read_page(int pid, char *buffer, diskoperator_types::page_type type) {
         int offset = pid * PAGE_SIZE;
 
-        if (type == HEAP_PAGE) {
+        if (type == diskoperator_types::HEAP_PAGE) {
             fseek(db_file, offset, SEEK_SET);
             if (fread(buffer, PAGE_SIZE, 1, db_file) == -1) {
                 throw std::runtime_error("Could not read page");
             };
             std::cout << "\nRead a page\n";
-        } else if (type == INDEX_PAGE) {
+        } else if (type == diskoperator_types::INDEX_PAGE) {
             fseek(index_file, offset, SEEK_SET);
         }
     }
 
-    void write_page(int pid, bool &dirty_bit, const char *write_data) {
+    void write_page(int pid, bool &dirty_bit, const char *write_data, diskoperator_types::page_type type) {
+        FILE *file = (type == diskoperator_types::HEAP_PAGE) ? db_file : index_file;
+
         int offset = pid * PAGE_SIZE;
-        fseek(db_file, offset, SEEK_SET);
-        if (fwrite(write_data, PAGE_SIZE, 1, db_file) == -1) {
+
+        fseek(file, offset, SEEK_SET);
+        if (fwrite(write_data, PAGE_SIZE, 1, file) != -1) {
             throw std::runtime_error("Could not write page");
         }
+
         if (dirty_bit) {
             dirty_bit = false;
-            fflush(db_file);
+            fflush(file);
         }
     }
     ~Disk_operator() {
