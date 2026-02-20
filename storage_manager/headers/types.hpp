@@ -1,8 +1,11 @@
 #ifndef TYPES
 #define TYPES
 
+#include <assert.h>
+#include <cstring>
 #include <iostream>
 #include <stdint.h>
+#include <vector>
 
 // namespace diskoperator_types
 namespace diskoperator_types {
@@ -76,25 +79,39 @@ typedef struct {
 
 // namespace btree_page_types
 namespace btree_page_types {
-constexpr int MAX_KEYS = (buffer_manager_types::page_data_size / 2) - 1;
-typedef size_t internal_node_id;
+constexpr int MAX_KEYS = 3;
+typedef size_t node_id;
 
-struct Leaf_Node {
-    int key;
-    heap_page_types::RID value;
-};
 #pragma pack(push, 1)
-struct Internal_Node {
-    internal_node_id page_id[MAX_KEYS + 1];
-    int key[MAX_KEYS];
-    int key_count = 0;
-    bool is_leaf = false;
+struct Node {
 
-    // Just because of raw pointer operation
-    void initialize() {
-        int key_count = 0;
-        bool is_leaf = false;
-    }
+  private:
+    struct Leaf_Node {
+        heap_page_types::RID values[MAX_KEYS];
+        node_id next_leaf; // later on  remove the pointer
+    };
+    struct Internal_Node {
+        node_id child_nodes[MAX_KEYS + 1]; // later on  remove the pointer
+    };
+
+  public:
+    node_id pid = buffer_manager_types::INVALID_PAGE_ID;
+    bool is_leaf = true;
+    int key_count = 0;
+    int keys[MAX_KEYS];
+    union u_data {
+        Leaf_Node leaf_node;
+        Internal_Node internal_node;
+
+        // Defines how data is initiated when some particular struct is used
+        u_data(Leaf_Node ln) : leaf_node(ln){};
+        u_data(Internal_Node in) : internal_node(in){};
+        u_data() : leaf_node(){};
+    } data;
+    // create a init using raw pointer conversion
+
+    // overall Node constructor based on union type
+    Node(bool leaf = true) : is_leaf(leaf), data(){};
 };
 #pragma pack(pop)
 

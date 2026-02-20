@@ -29,9 +29,8 @@ class buffer_pool {
     std::queue<buffer_manager_types::frame_id> index_replacement_check_queue;
     Disk_operator disk_operator;
 
-    template <typename TableType, typename FrameType, typename QueueType, typename ID>
-    buffer_manager_types::Page *page_access_logic(TableType &table, FrameType &frames, QueueType &queue, ID pid,
-                                                  diskoperator_types::page_type type) {
+    template <typename TableType, typename ID>
+    buffer_manager_types::Page *page_access_logic(TableType &table, ID pid, diskoperator_types::page_type type) {
         buffer_manager_types::frame_id frame_id = table.find(pid).second;
         if (table != table.end()) {
             frames[frame_id].pin_count += 1;
@@ -44,8 +43,8 @@ class buffer_pool {
                     frames[i].page_id = pid;
                     frames[i].pin_count = 1;
                     frames[i].type = type;
-                    table[pid] = i;
-                    queue.push(i);
+                    page_table[pid] = i;
+                    replacement_check_queue.push(i);
                     disk_operator.read_page(pid, frames[i].page_data, diskoperator_types::HEAP_PAGE);
                     std::cout << "\nNew Page Created\n";
                     return &frames[i];
@@ -57,9 +56,7 @@ class buffer_pool {
         frames[free_frame_id].page_id = pid;
         return &frames[free_frame_id];
     };
-
-    template <typename TableType, typename FrameType, typename ID>
-    void unpin_logic(TableType &table, FrameType &frames, ID pid, diskoperator_types::page_type type) {
+    template <typename TableType, typename ID> void unpin(TableType &table, ID pid, diskoperator_types::page_type type) {
         auto page = table.find(pid);
         buffer_manager_types::frame_id frame_idx;
 
@@ -71,37 +68,9 @@ class buffer_pool {
         if (frame_idx > buffer_manager_types::buffer_size) {
             std::cout << "fault";
         }
-        if (frames[frame_idx].pin_count > 0) {
+        if ([frame_idx].pin_count > 0) {
             frames[frame_idx].pin_count -= 1;
         }
-    };
-    template <typename TableType, typename FrameType>
-    buffer_manager_types::frame_id page_replacement_policy_logic(TableType &table, FrameType &frames, diskoperator_types::page_type type) {
-        int idx;
-        for (idx = 0; idx < replacement_check_queue.size(); idx++) {
-            buffer_manager_types::frame_id id = replacement_check_queue.front();
-            replacement_check_queue.pop();
-            if (frames[id].pin_count == 0) {
-                auto it = page_table.find(frames[id].page_id);
-
-                if (it != page_table.end()) {
-                    // write data here
-                    if (frames[id].dirty_bit) {
-                        disk_operator.write_page(it->first, frames[id].dirty_bit, frames[id].page_data, type);
-                    }
-                    page_table.erase(it->first);
-                }
-
-                frames[id].page_id = buffer_manager_types::INVALID_PAGE_ID;
-                return id;
-            } else if (frames[id].pin_count > 0) {
-                replacement_check_queue.push(id);
-                continue;
-            } else {
-                throw std::runtime_error("Page replacement error, pin count invalid");
-            }
-        }
-        throw std::runtime_error("All pages are pinned");
     };
 
   public:
@@ -110,7 +79,7 @@ class buffer_pool {
 
     buffer_manager_types::frame_id page_replacement_policy(diskoperator_types::page_type type);
     buffer_manager_types::Page *page_access(heap_page_types::page_id pid, diskoperator_types::page_type type);
-    void un_pin(int pid, diskoperator_types::page_type type);
+    void un_pin(int pid);
 };
 }; // namespace buffer_manager
 
