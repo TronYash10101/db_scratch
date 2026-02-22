@@ -2,3 +2,4 @@
 heap.bin
 index.bin
 build/
+**/**/\\
