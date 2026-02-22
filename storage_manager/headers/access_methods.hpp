@@ -25,7 +25,7 @@ class Access_methods {
     std::vector<heap_page_types::page_id> HeapTable;
 
   public:
-    explicit Access_methods(){};
+    explicit Access_methods();
 
     // Only scans the heap page for matching tuple, if found return an iterator
     // to it else NULL (Don't try to mix data storing logic here, assume correct

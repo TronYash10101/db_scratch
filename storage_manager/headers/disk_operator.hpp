@@ -23,13 +23,16 @@ class Disk_operator {
   public:
     Disk_operator(const std::string &db_filename, const std::string &index_filename, int page_size) {
 
-        db_file = fopen(db_filename.c_str(), "r+b");
-        index_file = fopen(index_filename.c_str(), "r+b");
         if (!db_file) {
             db_file = fopen(db_filename.c_str(), "w+b");
+        } else {
+            db_file = fopen(db_filename.c_str(), "r+b");
         }
+
         if (!index_file) {
             index_file = fopen(index_filename.c_str(), "w+b");
+        } else {
+            index_file = fopen(index_filename.c_str(), "r+b");
         }
         PAGE_SIZE = page_size;
     }

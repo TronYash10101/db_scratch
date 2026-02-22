@@ -88,10 +88,10 @@ struct Node {
   private:
     struct Leaf_Node {
         heap_page_types::RID values[MAX_KEYS];
-        node_id next_leaf; // later on  remove the pointer
+        node_id next_leaf = buffer_manager_types::INVALID_PAGE_ID;
     };
     struct Internal_Node {
-        node_id child_nodes[MAX_KEYS + 1]; // later on  remove the pointer
+        node_id child_nodes[MAX_KEYS + 1];
     };
 
   public:
@@ -108,10 +108,12 @@ struct Node {
         u_data(Internal_Node in) : internal_node(in){};
         u_data() : leaf_node(){};
     } data;
-    // create a init using raw pointer conversion
-
+    void init() {
+        this->key_count = 0;
+        this->is_leaf = true;
+    }
     // overall Node constructor based on union type
-    Node(bool leaf = true) : is_leaf(leaf), data(){};
+    Node(bool leaf = true) : is_leaf(leaf), key_count(0), data(){};
 };
 #pragma pack(pop)
 

@@ -11,106 +11,32 @@
 #include <iostream>
 #include <queue>
 #include <stdexcept>
+#include <stdio.h>
 #include <unordered_map>
 #include <vector>
 
 namespace buffer_manager {
 
-typedef std::unordered_map<heap_page_types::page_id, buffer_manager_types::frame_id> HeapTable_t;
-typedef std::unordered_map<btree_page_types::node_id, buffer_manager_types::frame_id> IndexTable_t;
+typedef std::unordered_map<heap_page_types::page_id, buffer_manager_types::frame_id> Table_t;
+typedef std::queue<buffer_manager_types::frame_id> Queue_t;
+typedef std::vector<buffer_manager_types::Page> Frame_t;
 
 class buffer_pool {
   private:
-    std::vector<buffer_manager_types::Page> heap_frames;
-    std::vector<buffer_manager_types::Page> index_frames;
-    HeapTable_t page_table;
-    IndexTable_t index_table;
-    std::queue<buffer_manager_types::frame_id> replacement_check_queue;
-    std::queue<buffer_manager_types::frame_id> index_replacement_check_queue;
+    Frame_t frames;
+
+    Table_t table;
+
+    Queue_t replacement_check_queue;
     Disk_operator disk_operator;
-
-    template <typename TableType, typename FrameType, typename QueueType, typename ID>
-    buffer_manager_types::Page *page_access_logic(TableType &table, FrameType &frames, QueueType &queue, ID pid,
-                                                  diskoperator_types::page_type type) {
-        buffer_manager_types::frame_id frame_id = table.find(pid).second;
-        if (table != table.end()) {
-            frames[frame_id].pin_count += 1;
-            frames[frame_id].dirty_bit = true;
-            std::cout << "\nPage Found\n";
-            return &frames[frame_id];
-        } else {
-            for (auto i = 0; i != frames.size(); ++i) {
-                if (frames[i].page_id == buffer_manager_types::INVALID_PAGE_ID) {
-                    frames[i].page_id = pid;
-                    frames[i].pin_count = 1;
-                    frames[i].type = type;
-                    table[pid] = i;
-                    queue.push(i);
-                    disk_operator.read_page(pid, frames[i].page_data, diskoperator_types::HEAP_PAGE);
-                    std::cout << "\nNew Page Created\n";
-                    return &frames[i];
-                }
-            }
-        }
-        buffer_manager_types::frame_id free_frame_id = page_replacement_policy(type);
-        std::cout << "Page Replaced Successfully";
-        frames[free_frame_id].page_id = pid;
-        return &frames[free_frame_id];
-    };
-
-    template <typename TableType, typename FrameType, typename ID>
-    void unpin_logic(TableType &table, FrameType &frames, ID pid, diskoperator_types::page_type type) {
-        auto page = table.find(pid);
-        buffer_manager_types::frame_id frame_idx;
-
-        if (page != table.end()) {
-            frame_idx = page->second;
-        } else {
-            throw std::runtime_error("page not found");
-        }
-        if (frame_idx > buffer_manager_types::buffer_size) {
-            std::cout << "fault";
-        }
-        if (frames[frame_idx].pin_count > 0) {
-            frames[frame_idx].pin_count -= 1;
-        }
-    };
-    template <typename TableType, typename FrameType>
-    buffer_manager_types::frame_id page_replacement_policy_logic(TableType &table, FrameType &frames, diskoperator_types::page_type type) {
-        int idx;
-        for (idx = 0; idx < replacement_check_queue.size(); idx++) {
-            buffer_manager_types::frame_id id = replacement_check_queue.front();
-            replacement_check_queue.pop();
-            if (frames[id].pin_count == 0) {
-                auto it = page_table.find(frames[id].page_id);
-
-                if (it != page_table.end()) {
-                    // write data here
-                    if (frames[id].dirty_bit) {
-                        disk_operator.write_page(it->first, frames[id].dirty_bit, frames[id].page_data, type);
-                    }
-                    page_table.erase(it->first);
-                }
-
-                frames[id].page_id = buffer_manager_types::INVALID_PAGE_ID;
-                return id;
-            } else if (frames[id].pin_count > 0) {
-                replacement_check_queue.push(id);
-                continue;
-            } else {
-                throw std::runtime_error("Page replacement error, pin count invalid");
-            }
-        }
-        throw std::runtime_error("All pages are pinned");
-    };
 
   public:
     // MUST declare the constructor here if you define it in the cpp
     buffer_pool(const std::string &db_filename, const std::string &index_filename);
 
-    buffer_manager_types::frame_id page_replacement_policy(diskoperator_types::page_type type);
     buffer_manager_types::Page *page_access(heap_page_types::page_id pid, diskoperator_types::page_type type);
-    void un_pin(int pid, diskoperator_types::page_type type);
+    buffer_manager_types::frame_id page_replacement_policy(diskoperator_types::page_type type);
+    void un_pin(heap_page_types::page_id pid, diskoperator_types::page_type type);
 };
 }; // namespace buffer_manager
 

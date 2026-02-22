@@ -47,7 +47,7 @@ std::optional<heap_page_types::RID> access_methods::Access_methods::heap_scan(bu
 
 void access_methods::Access_methods::heap_table_push(heap_page_types::page_id pid) { HeapTable.push_back(pid); }
 
-void access_methods::Access_methods::bptree_leaf_insert(char *raw_index_page, char *new_index_page, btree_page_types::node_id pid, int key,
+void access_methods::Access_methods::bptree_leaf_insert(char *raw_index_page, char *new_index_page, heap_page_types::page_id pid, int key,
                                                         btree_page_types::node_id new_pid, heap_page_types::RID rid) {
 
     btree_page_types::Node *index_page = reinterpret_cast<btree_page_types::Node *>(raw_index_page);
@@ -93,7 +93,7 @@ void access_methods::Access_methods::bptree_leaf_insert(char *raw_index_page, ch
 }
 
 void access_methods::Access_methods::bptree_internal_insert(char *raw_index_page, char *new_index_page, btree_page_types::node_id pid,
-                                                            btree_page_types::node_id new_pid, btree_page_types::node_id child_pid,
+                                                            heap_page_types::page_id new_pid, btree_page_types::node_id child_pid,
                                                             int key) {
     btree_page_types::Node *internal_node = reinterpret_cast<btree_page_types::Node *>(raw_index_page);
     if (internal_node->key_count < btree_page_types::MAX_KEYS) {
@@ -140,8 +140,8 @@ void access_methods::Access_methods::bptree_internal_insert(char *raw_index_page
 
 access_methods::Access_methods::internal_split_res
 access_methods::Access_methods::bptree_internal_split(char *old_raw_index_page, char *new_raw_index_page,
-                                                      btree_page_types::node_id new_internal_pid, int *temp_keys,
-                                                      btree_page_types::node_id *temp_child_id) {
+                                                      heap_page_types::page_id new_internal_pid, int *temp_keys,
+                                                      heap_page_types::page_id *temp_child_id) {
 
     btree_page_types::Node *old_internal_node = reinterpret_cast<btree_page_types::Node *>(old_raw_index_page);
     btree_page_types::Node *new_internal_node = reinterpret_cast<btree_page_types::Node *>(new_raw_index_page);
@@ -171,8 +171,8 @@ access_methods::Access_methods::bptree_internal_split(char *old_raw_index_page, 
 }
 
 access_methods::Access_methods::leaf_split_res
-access_methods::Access_methods::bptree_leaf_split(char *old_raw_index_page, char *new_raw_index_page,
-                                                  btree_page_types::node_id new_leaf_pid, int *temp_keys, heap_page_types::RID *temp_rids) {
+access_methods::Access_methods::bptree_leaf_split(char *old_raw_index_page, char *new_raw_index_page, heap_page_types::page_id new_leaf_pid,
+                                                  int *temp_keys, heap_page_types::RID *temp_rids) {
 
     // As internal node and new leaf are created in this process, new frame should be brought into index_frame and managed here, also
     // writing to file should be done
@@ -196,7 +196,7 @@ access_methods::Access_methods::bptree_leaf_split(char *old_raw_index_page, char
     memcpy(old_leaf_page->data.leaf_node.values, temp_rids, sizeof(heap_page_types::RID) * left_size);
     memcpy(new_leaf_page->data.leaf_node.values, temp_rids + left_size, sizeof(heap_page_types::RID) * right_size);
 
-    new_leaf_page->data.leaf_node.next_leaf = old_leaf_page->data.leaf_node.next_leaf; // revise this part
+    new_leaf_page->data.leaf_node.next_leaf = old_leaf_page->data.leaf_node.next_leaf;
     old_leaf_page->data.leaf_node.next_leaf = new_leaf_page->pid;
 
     old_leaf_page->key_count = left_size;
