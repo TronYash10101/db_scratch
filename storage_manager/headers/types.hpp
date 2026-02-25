@@ -27,7 +27,7 @@ constexpr std::size_t page_data_size = 4096;
 
 struct Page {
     char page_data[page_data_size];
-    size_t page_id = INVALID_PAGE_ID; // gives the max value of size_t
+    int page_id = INVALID_PAGE_ID; // gives the max value of size_t
     bool dirty_bit = false;
     int pin_count = 0;
     diskoperator_types::page_type type;
@@ -38,7 +38,7 @@ struct Page {
 // namespace heap_page_types
 namespace heap_page_types {
 
-typedef size_t page_id;
+typedef int page_id;
 
 constexpr int MAX_SLOTS = 10;
 
@@ -80,7 +80,7 @@ typedef struct {
 // namespace btree_page_types
 namespace btree_page_types {
 constexpr int MAX_KEYS = 3;
-typedef size_t node_id;
+typedef int node_id;
 
 #pragma pack(push, 1)
 struct Node {
@@ -95,7 +95,7 @@ struct Node {
     };
 
   public:
-    node_id pid = buffer_manager_types::INVALID_PAGE_ID;
+    // node_id pid = buffer_manager_types::INVALID_PAGE_ID;
     bool is_leaf = true;
     int key_count = 0;
     int keys[MAX_KEYS];

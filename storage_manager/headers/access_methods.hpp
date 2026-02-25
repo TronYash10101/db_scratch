@@ -11,17 +11,16 @@
 #include <stdexcept>
 #include <vector>
 namespace access_methods {
-
+struct leaf_split_res {
+    int promoted_key;
+    btree_page_types::node_id new_pid;
+};
+struct internal_split_res {
+    int promoted_key;
+    btree_page_types::node_id new_pid;
+};
 class Access_methods {
   private:
-    struct leaf_split_res {
-        int promoted_key;
-        btree_page_types::node_id new_pid;
-    };
-    struct internal_split_res {
-        int promoted_key;
-        btree_page_types::node_id new_pid;
-    };
     std::vector<heap_page_types::page_id> HeapTable;
 
   public:
@@ -34,20 +33,25 @@ class Access_methods {
 
     void heap_table_push(heap_page_types::page_id pid);
 
-    void bptree_leaf_insert(char *raw_index_page, char *new_index_page, btree_page_types::node_id pid, int key,
-                            btree_page_types::node_id new_pid, heap_page_types::RID rid);
+    /* Pages can be NULL */
+    std::optional<access_methods::leaf_split_res> bptree_leaf_insert(buffer_manager_types::Page *left_raw_page,
+                                                                     buffer_manager_types::Page *right_raw_page,
+                                                                     heap_page_types::page_id left_pid, btree_page_types::node_id right_pid,
+                                                                     int key, heap_page_types::RID rid);
 
-    /* Caller should use the value returned by this function to create a parent node pointing to children */
-    access_methods::Access_methods::leaf_split_res bptree_leaf_split(char *old_raw_index_page, char *new_raw_index_page,
-                                                                     btree_page_types::node_id new_leaf_pid, int *temp_keys,
-                                                                     heap_page_types::RID *temp_rids);
+    std::optional<access_methods::internal_split_res> bptree_internal_insert(buffer_manager_types::Page *left_raw_page,
+                                                                             buffer_manager_types::Page *right_raw_page,
+                                                                             btree_page_types::node_id left_pid,
+                                                                             heap_page_types::page_id right_pid,
+                                                                             btree_page_types::node_id child_pid, int key);
 
-    void bptree_internal_insert(char *raw_index_page, char *new_index_page, btree_page_types::node_id pid,
-                                btree_page_types::node_id child_pid, btree_page_types::node_id new_pid, int key);
+    access_methods::internal_split_res bptree_internal_split(buffer_manager_types::Page *left_raw_page,
+                                                             buffer_manager_types::Page *right_raw_page, heap_page_types::page_id right_pid,
+                                                             int *temp_keys, heap_page_types::page_id *temp_child_id);
 
-    access_methods::Access_methods::internal_split_res bptree_internal_split(char *old_raw_index_page, char *new_raw_index_page,
-                                                                             btree_page_types::node_id new_internal_pid, int *temp_keys,
-                                                                             btree_page_types::node_id *temp_child_id);
+    access_methods::leaf_split_res bptree_leaf_split(buffer_manager_types::Page *left_raw_page, buffer_manager_types::Page *right_raw_page,
+                                                     heap_page_types::page_id right_pid, int *temp_keys, heap_page_types::RID *temp_rids);
+
     void index_scan();
 };
 } // namespace access_methods

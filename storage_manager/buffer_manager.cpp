@@ -1,6 +1,7 @@
 #include "headers/buffer_manager.hpp"
 #include "headers/disk_operator.hpp"
 #include "headers/writer.hpp"
+#include <stdexcept>
 
 buffer_manager::buffer_pool::buffer_pool(const std::string &db_filename, const std::string &index_filename)
     : disk_operator(db_filename, index_filename, buffer_manager_types::page_data_size), frames(buffer_manager_types::buffer_size),
@@ -9,7 +10,12 @@ buffer_manager::buffer_pool::buffer_pool(const std::string &db_filename, const s
 }
 
 buffer_manager_types::Page *buffer_manager::buffer_pool::page_access(heap_page_types::page_id pid, diskoperator_types::page_type type) {
+    if (pid < 0) {
+        throw std::runtime_error("NEGATIVE PID RECIEVED");
+    }
     auto it = table.find(pid);
+    // disk_operator.read_page( pid, char *buffer, diskoperator_types::page_type type)
+
     if (it != table.end()) {
         frames[it->second].pin_count += 1;
         frames[it->second].dirty_bit = true;
@@ -78,3 +84,16 @@ buffer_manager_types::frame_id buffer_manager::buffer_pool::page_replacement_pol
     }
     throw std::runtime_error("All pages are pinned");
 };
+
+uintmax_t buffer_manager::buffer_pool::get_last_pid(diskoperator_types::page_type type) { return disk_operator.last_pid(type); }
+
+void buffer_manager::buffer_pool::dp_write_page(buffer_manager_types::Page *page, diskoperator_types::page_type type) {
+    // buffer_manager_types::Page *page = reinterpret_cast<buffer_manager_types::Page *>(raw_page);
+
+    disk_operator.write_page(page->page_id, page->dirty_bit, page->page_data, type);
+}
+void buffer_manager::buffer_pool::dp_read_page(buffer_manager_types::Page *page, diskoperator_types::page_type type) {
+    // buffer_manager_types::Page *page = reinterpret_cast<buffer_manager_types::Page *>(raw_page);
+
+    disk_operator.read_page(page->page_id, page->page_data, type);
+}

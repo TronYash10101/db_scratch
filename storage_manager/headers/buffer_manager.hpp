@@ -20,6 +20,7 @@ namespace buffer_manager {
 typedef std::unordered_map<heap_page_types::page_id, buffer_manager_types::frame_id> Table_t;
 typedef std::queue<buffer_manager_types::frame_id> Queue_t;
 typedef std::vector<buffer_manager_types::Page> Frame_t;
+typedef std::vector<heap_page_types::page_id> page_list;
 
 class buffer_pool {
   private:
@@ -35,8 +36,16 @@ class buffer_pool {
     buffer_pool(const std::string &db_filename, const std::string &index_filename);
 
     buffer_manager_types::Page *page_access(heap_page_types::page_id pid, diskoperator_types::page_type type);
+
     buffer_manager_types::frame_id page_replacement_policy(diskoperator_types::page_type type);
+
     void un_pin(heap_page_types::page_id pid, diskoperator_types::page_type type);
+
+    uintmax_t get_last_pid(diskoperator_types::page_type type);
+
+    void dp_write_page(buffer_manager_types::Page *page, diskoperator_types::page_type type);
+
+    void dp_read_page(buffer_manager_types::Page *page, diskoperator_types::page_type type);
 };
 }; // namespace buffer_manager
 

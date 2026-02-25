@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
+#include <filesystem>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -16,6 +17,8 @@
 
 class Disk_operator {
   private:
+    std::filesystem::path db_path;
+    std::filesystem::path index_path;
     FILE *db_file;
     FILE *index_file;
     int PAGE_SIZE;
@@ -34,6 +37,8 @@ class Disk_operator {
         } else {
             index_file = fopen(index_filename.c_str(), "r+b");
         }
+        db_path = db_filename;
+        index_path = index_filename;
         PAGE_SIZE = page_size;
     }
 
@@ -57,7 +62,7 @@ class Disk_operator {
         int offset = pid * PAGE_SIZE;
 
         fseek(file, offset, SEEK_SET);
-        if (fwrite(write_data, PAGE_SIZE, 1, file) != -1) {
+        if (fwrite(write_data, PAGE_SIZE, 1, file) == 0) {
             throw std::runtime_error("Could not write page");
         }
 
@@ -65,6 +70,15 @@ class Disk_operator {
             dirty_bit = false;
             fflush(file);
         }
+    }
+
+    uintmax_t last_pid(diskoperator_types::page_type type) {
+        if (type == diskoperator_types::HEAP_PAGE) {
+            return std::filesystem::file_size(db_path) / PAGE_SIZE;
+        } else if (type == diskoperator_types::INDEX_PAGE) {
+            return std::filesystem::file_size(index_path) / PAGE_SIZE;
+        }
+        throw std::runtime_error("ERROR GETTING LAST PID");
     }
     ~Disk_operator() {
         if (db_file) {
