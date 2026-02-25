@@ -1,4 +1,5 @@
 #include "../storage_manager/headers/access_methods.hpp"
+#include <cassert>
 #include <filesystem>
 #include <iostream>
 #include <optional>
@@ -18,7 +19,7 @@ buffer_manager_types::Page *fetch_page(buffer_manager::buffer_pool &buff_pool) {
     buffer_manager_types::Page *p1 = buff_pool.page_access(last_pid, diskoperator_types::INDEX_PAGE);
 
     btree_page_types::Node *p1n = reinterpret_cast<btree_page_types::Node *>(p1);
-    p1n->init();
+    // p1n->init();
     return p1;
 }
 
@@ -30,63 +31,64 @@ buffer_manager_types::Page *start(buffer_manager::buffer_pool &buff_pool, buffer
     return root_page;
 }
 
-std::optional<access_methods::internal_split_res> insert(buffer_manager::buffer_pool &buff_pool,
-                                                         access_methods::Access_methods &access_methods, heap_page_types::page_id curr_pid,
-                                                         heap_page_types::page_id prev_pid, int key, heap_page_types::RID rid) {
+std::optional<access_methods::split_res> insert(buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,
+                                                heap_page_types::page_id curr_pid, int key, heap_page_types::RID rid,
+                                                root_struct *curr_root) {
 
     buffer_manager_types::Page *curr_page = buff_pool.page_access(curr_pid, diskoperator_types::INDEX_PAGE);
     btree_page_types::Node *node = reinterpret_cast<btree_page_types::Node *>(curr_page->page_data);
     heap_page_types::page_id next_pid;
-    std::optional<access_methods::internal_split_res> internal_res;
+    std::optional<access_methods::split_res> res;
+    std::optional<access_methods::split_res> child_node_ans;
 
     if (node->is_leaf) {
-        buffer_manager_types::Page *new_page = fetch_page(buff_pool);
-        buffer_manager_types::Page *leaf_page = buff_pool.page_access(curr_pid, diskoperator_types::INDEX_PAGE);
 
-        std::optional<access_methods::leaf_split_res> leaf_res =
-                access_methods.bptree_leaf_insert(leaf_page, new_page, leaf_page->page_id, new_page->page_id, key, rid);
-        std::cout << "\n This call \n" << leaf_res.has_value();
-        if (leaf_res.has_value()) {
-            // std::cout << "I got here" << internal_res->promoted_key;
-            buffer_manager_types::Page *prev_new_page = fetch_page(buff_pool);
-            buffer_manager_types::Page *prev_page = buff_pool.page_access(prev_pid, diskoperator_types::INDEX_PAGE);
-            std::optional<access_methods::internal_split_res> internal_res = access_methods.bptree_internal_insert(
-                    prev_page, prev_new_page, prev_page->page_id, prev_new_page->page_id, leaf_res->new_pid, leaf_res->promoted_key);
-            return internal_res;
+        buffer_manager_types::Page *leaf_page = buff_pool.page_access(curr_pid, diskoperator_types::INDEX_PAGE);
+        buffer_manager_types::Page *new_page = nullptr;
+
+        if (node->key_count == btree_page_types::MAX_KEYS) {
+            new_page = fetch_page(buff_pool);
+            new_page->dirty_bit = true;
         }
+        res = access_methods.bptree_leaf_insert(leaf_page, new_page, leaf_page->page_id,
+                                                new_page ? new_page->page_id : buffer_manager_types::INVALID_PAGE_ID, key, rid);
+        leaf_page->dirty_bit = true;
+
     } else if (node->is_leaf == false) {
-        /* for (int i = 1; i <= node->key_count - 2; i++) {
-            if (key < node->keys[i - 1]) {
-                next_pid = node->data.internal_node.child_nodes[i - 1];
-            } else if (node->keys[i] <= key && key < node->keys[i + 1]) {
-                next_pid = node->data.internal_node.child_nodes[i];
-            } else if (node->keys[i + 1] <= key) {
-                next_pid = node->data.internal_node.child_nodes[i + 1];
-            }
-        } */
+
         int i = 0;
         while (i < node->key_count && key >= node->keys[i])
             i++;
-
         next_pid = node->data.internal_node.child_nodes[i];
-        std::optional<access_methods::internal_split_res> child_node_ans = insert(buff_pool, access_methods, next_pid, curr_pid, key, rid);
+
+        child_node_ans = insert(buff_pool, access_methods, next_pid, key, rid, curr_root);
+
         if (child_node_ans.has_value()) {
-            buffer_manager_types::Page *prev_new_page = fetch_page(buff_pool);
-            buffer_manager_types::Page *prev_page = buff_pool.page_access(prev_pid, diskoperator_types::INDEX_PAGE);
-            std::optional<access_methods::internal_split_res> internal_res =
-                    access_methods.bptree_internal_insert(prev_page, prev_new_page, prev_page->page_id, prev_new_page->page_id,
-                                                          child_node_ans->new_pid, child_node_ans->promoted_key);
-            // update root
-            if ((prev_pid == curr_pid) && internal_res.has_value()) {
-                buffer_manager_types::Page *new_root = fetch_page(buff_pool);
-                btree_page_types::Node *new_node = reinterpret_cast<btree_page_types::Node *>(curr_page->page_data);
-                new_node->init();
-                // look out for NULLs
-                access_methods.bptree_internal_insert(new_root, NULL, new_root->page_id, buffer_manager_types::INVALID_PAGE_ID,
-                                                      internal_res->new_pid, internal_res->promoted_key);
-            }
+            buffer_manager_types::Page *right_new_page = fetch_page(buff_pool);
+            btree_page_types::Node *right_new_node = reinterpret_cast<btree_page_types::Node *>(right_new_page->page_data);
+            right_new_node->init();
+            res = access_methods.bptree_internal_insert(curr_page, right_new_page, curr_page->page_id, right_new_page->page_id,
+                                                        child_node_ans->child_pid, child_node_ans->promoted_key);
+            right_new_page->dirty_bit = true;
         }
     }
+    curr_page->dirty_bit = true;
+    if (res.has_value() && curr_pid == curr_root->root_pid) {
+        buffer_manager_types::Page *new_root_page = fetch_page(buff_pool);
+        btree_page_types::Node *new_root_node = reinterpret_cast<btree_page_types::Node *>(new_root_page->page_data);
+        new_root_node->init();
+        new_root_node->is_leaf = false;
+        new_root_node->key_count = 1;
+        new_root_node->keys[0] = res->promoted_key;
+        // heap_page_types::page_id old_root = curr_pid;
+        curr_root->root_pid = new_root_page->page_id;
+
+        new_root_node->data.internal_node.child_nodes[0] = curr_page->page_id;
+        new_root_node->data.internal_node.child_nodes[1] = res->child_pid;
+    } else if (res.has_value() && curr_pid != curr_root->root_pid) {
+        return res;
+    }
+
     return std::nullopt;
 }
 
@@ -99,31 +101,67 @@ int main() {
 
     access_methods::Access_methods access_methods;
 
+    heap_page_types::RID samp_rid = {0, 0};
+
     buffer_manager_types::Page *root_page = fetch_page(buff_pool);
 
-    heap_page_types::RID samp_rid = {0, 0};
-    btree_page_types::Node *root_leaf = reinterpret_cast<btree_page_types::Node *>(root_page);
+    btree_page_types::Node *root_leaf = reinterpret_cast<btree_page_types::Node *>(root_page->page_data);
 
-    // dont see rid
-}
+    root_leaf->init();
+    root_leaf->is_leaf = true;
 
-/* for (int x = 0; x < 4; x++) {
-    std::optional<access_methods::leaf_split_res> res = access_methods.bptree_leaf_insert(
-            samp_page[0]->page_data, samp_page[1]->page_data, samp_page[1]->page_id, x, samp_page[0]->page_id, sample_rid1);
+    struct root_struct curr_root = {root_page->page_id};
 
-    std::cout << "\n--- After inserting key " << x << " ---\n";
-
-    std::cout << "Leaf Page ID: " << samp_page[0]->page_id << "\n";
-    std::cout << "Key Count: " << leaf_page->key_count << "\n";
-
-    std::cout << "Right Page ID: " << samp_page[1]->page_id << "\n";
-    std::cout << "Key Count: " << leaf_page_next->key_count << "\n";
-
-    std::cout << "[ ";
-    for (int i = 0; i < leaf_page->key_count; i++) {
-        std::cout << leaf_page->keys[i] << " ";
+    // -------- INSERT --------
+    for (int i = 0; i < 4; i++) {
+        insert(buff_pool, access_methods,
+               curr_root.root_pid, // IMPORTANT
+               i, samp_rid, &curr_root);
     }
-    std::cout << "]\n";
 
-    std::cout << "[ ";
-} */
+    // -------- FETCH CURRENT ROOT --------
+    buffer_manager_types::Page *new_root_page = buff_pool.page_access(curr_root.root_pid, diskoperator_types::INDEX_PAGE);
+
+    btree_page_types::Node *new_root = reinterpret_cast<btree_page_types::Node *>(new_root_page->page_data);
+
+    // -------- ASSERT ROOT STRUCTURE --------
+    assert(new_root->is_leaf == false);
+    std::cout << "assert is_leaf false passed\n";
+
+    assert(new_root->key_count == 1);
+    std::cout << "assert key_count == 1 passed\n";
+
+    assert(new_root->keys[0] == 2);
+    std::cout << "assert promoted key == 2 passed\n";
+
+    // -------- ASSERT CHILDREN EXIST --------
+    heap_page_types::page_id left_pid = new_root->data.internal_node.child_nodes[0];
+
+    heap_page_types::page_id right_pid = new_root->data.internal_node.child_nodes[1];
+
+    assert(left_pid != right_pid);
+    std::cout << "assert two distinct children passed\n";
+
+    // -------- VERIFY LEAF CONTENTS --------
+    buffer_manager_types::Page *left_page = buff_pool.page_access(left_pid, diskoperator_types::INDEX_PAGE);
+
+    buffer_manager_types::Page *right_page = buff_pool.page_access(right_pid, diskoperator_types::INDEX_PAGE);
+
+    btree_page_types::Node *left_leaf = reinterpret_cast<btree_page_types::Node *>(left_page->page_data);
+
+    btree_page_types::Node *right_leaf = reinterpret_cast<btree_page_types::Node *>(right_page->page_data);
+
+    assert(left_leaf->is_leaf);
+    assert(right_leaf->is_leaf);
+
+    assert(left_leaf->key_count == 2);
+    assert(right_leaf->key_count == 2);
+
+    assert(left_leaf->keys[0] == 0);
+    assert(left_leaf->keys[1] == 1);
+
+    assert(right_leaf->keys[0] == 2);
+    assert(right_leaf->keys[1] == 3);
+
+    std::cout << "leaf distribution correct\n";
+}

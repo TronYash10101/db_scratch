@@ -53,6 +53,10 @@ class Disk_operator {
             std::cout << "\nRead a page\n";
         } else if (type == diskoperator_types::INDEX_PAGE) {
             fseek(index_file, offset, SEEK_SET);
+            if (fread(buffer, PAGE_SIZE, 1, index_file) == -1) {
+                throw std::runtime_error("Could not read page");
+            };
+            std::cout << "\nRead a page\n";
         }
     }
 
@@ -66,10 +70,10 @@ class Disk_operator {
             throw std::runtime_error("Could not write page");
         }
 
-        if (dirty_bit) {
+        /* if (dirty_bit) {
             dirty_bit = false;
-            fflush(file);
-        }
+        } */
+        fflush(file);
     }
 
     uintmax_t last_pid(diskoperator_types::page_type type) {

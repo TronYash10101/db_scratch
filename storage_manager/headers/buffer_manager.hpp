@@ -46,6 +46,8 @@ class buffer_pool {
     void dp_write_page(buffer_manager_types::Page *page, diskoperator_types::page_type type);
 
     void dp_read_page(buffer_manager_types::Page *page, diskoperator_types::page_type type);
+
+    void final_write(diskoperator_types::page_type type);
 };
 }; // namespace buffer_manager
 
