@@ -40,6 +40,16 @@ buffer_manager_types::Page *start(buffer_manager::buffer_pool &buff_pool, buffer
     return root_page;
 }
 
+int generate_random() {
+    std::random_device rd;
+
+    std::mt19937 gen(rd());
+
+    std::uniform_int_distribution<int> distrib(1, 100);
+
+    return distrib(gen);
+}
+
 std::optional<access_methods::split_res> insert(buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,
                                                 heap_page_types::page_id curr_pid, int key, heap_page_types::RID rid,
                                                 root_struct *curr_root) {
@@ -67,8 +77,10 @@ std::optional<access_methods::split_res> insert(buffer_manager::buffer_pool &buf
     } else if (node->is_leaf == false) {
 
         int i = 0;
-        while (i < node->key_count && key >= node->keys[i])
+        while (i < node->key_count && key > node->keys[i]) {
             i++;
+        }
+
         next_pid = node->data.internal_node.child_nodes[i];
 
         child_node_ans = insert(buff_pool, access_methods, next_pid, key, rid, curr_root);
@@ -142,7 +154,7 @@ void test_sequential_large(buffer_manager::buffer_pool &buff_pool, access_method
 
     // Insert 0..20
     for (int i = 0; i <= 20; i++) {
-        insert(buff_pool, access_methods, curr_root.root_pid, i, samp_rid, &curr_root);
+        insert(buff_pool, access_methods, curr_root.root_pid, generate_random(), samp_rid, &curr_root);
     }
 
     // Fetch current root
@@ -173,7 +185,7 @@ void test_sequential_large(buffer_manager::buffer_pool &buff_pool, access_method
     buffer_manager_types::Page *pg = buff_pool.page_access(node->data.leaf_node.next_leaf, diskoperator_types::INDEX_PAGE);
     btree_page_types::Node *pgn = reinterpret_cast<btree_page_types::Node *>(pg->page_data);
     while (pgn->data.leaf_node.next_leaf != buffer_manager_types::INVALID_PAGE_ID) {
-        for (int c = 0; c < btree_page_types::MAX_KEYS; c++) {
+        for (int c = 0; c < pgn->key_count; c++) {
             std::cout << pgn->keys[c] << ",";
         }
         std::cout << "-->";

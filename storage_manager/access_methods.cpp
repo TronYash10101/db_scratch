@@ -62,9 +62,9 @@ std::optional<access_methods::split_res> access_methods::Access_methods::bptree_
             } */
         } else if (index_page->key_count != 0) {
             index_page->key_count += 1;
-            int i = index_page->key_count - 2;
 
-            while (i >= 0 && index_page->keys[i] > key) {
+            int i = index_page->key_count - 2;
+            while (i >= 0 && index_page->keys[i] > key && index_page->keys[i] != key) {
                 index_page->keys[i + 1] = index_page->keys[i];
                 index_page->data.leaf_node.values[i + 1] = index_page->data.leaf_node.values[i];
                 i--;
@@ -81,13 +81,13 @@ std::optional<access_methods::split_res> access_methods::Access_methods::bptree_
         memcpy(temp_keys, index_page->keys, sizeof(int) * (index_page->key_count));
         memcpy(temp_rids, index_page->data.leaf_node.values, sizeof(heap_page_types::RID) * (index_page->key_count));
 
-        int i = index_page->key_count - 1; // index review
-
+        int i = index_page->key_count - 1;
         while (i >= 0 && temp_keys[i] > key) {
             temp_keys[i + 1] = temp_keys[i];
             temp_rids[i + 1] = temp_rids[i];
             i--;
         }
+
         temp_keys[i + 1] = key;
         temp_rids[i + 1] = rid;
         return bptree_leaf_split(left_raw_page, right_raw_page, temp_keys, temp_rids);
@@ -195,8 +195,8 @@ access_methods::split_res access_methods::Access_methods::bptree_leaf_split(buff
     int left_size = split_idx;
     int right_size = total - left_size;
 
-    memcpy(old_leaf_page->keys, temp_keys, sizeof(int) * left_size);
-    memcpy(new_leaf_page->keys, temp_keys + left_size, sizeof(int) * right_size);
+    memcpy(old_leaf_page->keys, temp_keys, sizeof(heap_page_types::page_id) * left_size);
+    memcpy(new_leaf_page->keys, temp_keys + left_size, sizeof(heap_page_types::page_id) * right_size);
     memcpy(old_leaf_page->data.leaf_node.values, temp_rids, sizeof(heap_page_types::RID) * left_size);
     memcpy(new_leaf_page->data.leaf_node.values, temp_rids + left_size, sizeof(heap_page_types::RID) * right_size);
 
