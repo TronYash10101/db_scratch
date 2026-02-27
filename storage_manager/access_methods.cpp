@@ -49,15 +49,13 @@ void access_methods::Access_methods::heap_table_push(heap_page_types::page_id pi
 
 std::optional<access_methods::split_res> access_methods::Access_methods::bptree_leaf_insert(buffer_manager_types::Page *left_raw_page,
                                                                                             buffer_manager_types::Page *right_raw_page,
-                                                                                            heap_page_types::page_id left_pid,
-                                                                                            btree_page_types::node_id right_pid, int key,
-                                                                                            heap_page_types::RID rid) {
+                                                                                            int key, heap_page_types::RID rid) {
     /* Pages can be NULL */
 
     btree_page_types::Node *index_page = reinterpret_cast<btree_page_types::Node *>(left_raw_page->page_data);
     if (index_page->key_count < btree_page_types::MAX_KEYS) {
         if (index_page->key_count == 0) {
-            index_page->key_count += 1;
+            index_page->key_count = 1;
             index_page->keys[index_page->key_count - 1] = key;
             /* if (index_page->pid == buffer_manager_types::INVALID_PAGE_ID) {
                 index_page->pid = left_pid;
@@ -92,15 +90,15 @@ std::optional<access_methods::split_res> access_methods::Access_methods::bptree_
         }
         temp_keys[i + 1] = key;
         temp_rids[i + 1] = rid;
-        return bptree_leaf_split(left_raw_page, right_raw_page, right_pid, temp_keys, temp_rids);
+        return bptree_leaf_split(left_raw_page, right_raw_page, temp_keys, temp_rids);
     }
     return std::nullopt;
 }
 
-std::optional<access_methods::split_res>
-access_methods::Access_methods::bptree_internal_insert(buffer_manager_types::Page *left_raw_page,
-                                                       buffer_manager_types::Page *right_raw_page, btree_page_types::node_id left_pid,
-                                                       heap_page_types::page_id right_pid, btree_page_types::node_id child_pid, int key) {
+std::optional<access_methods::split_res> access_methods::Access_methods::bptree_internal_insert(buffer_manager_types::Page *left_raw_page,
+                                                                                                buffer_manager_types::Page *right_raw_page,
+                                                                                                btree_page_types::node_id child_pid,
+                                                                                                int key) {
 
     btree_page_types::Node *internal_node = reinterpret_cast<btree_page_types::Node *>(left_raw_page->page_data);
     if (internal_node->key_count < btree_page_types::MAX_KEYS) {
@@ -141,14 +139,13 @@ access_methods::Access_methods::bptree_internal_insert(buffer_manager_types::Pag
         }
         temp_keys[i + 1] = key;
         temp_child_id[i + 2] = child_pid;
-        return bptree_internal_split(left_raw_page, right_raw_page, right_pid, temp_keys, temp_child_id);
+        return bptree_internal_split(left_raw_page, right_raw_page, temp_keys, temp_child_id);
     }
     return std::nullopt;
 };
 
 access_methods::split_res access_methods::Access_methods::bptree_internal_split(buffer_manager_types::Page *left_raw_page,
-                                                                                buffer_manager_types::Page *right_raw_page,
-                                                                                heap_page_types::page_id right_pid, int *temp_keys,
+                                                                                buffer_manager_types::Page *right_raw_page, int *temp_keys,
                                                                                 heap_page_types::page_id *temp_child_id) {
 
     btree_page_types::Node *old_internal_node = reinterpret_cast<btree_page_types::Node *>(left_raw_page->page_data);
@@ -174,13 +171,12 @@ access_methods::split_res access_methods::Access_methods::bptree_internal_split(
     old_internal_node->key_count = left_size;
     new_internal_node->key_count = right_size;
 
-    struct split_res res = {temp_keys[split_idx], right_pid};
+    struct split_res res = {temp_keys[split_idx], right_raw_page->page_id};
     return res;
 }
 
 access_methods::split_res access_methods::Access_methods::bptree_leaf_split(buffer_manager_types::Page *left_raw_page,
-                                                                            buffer_manager_types::Page *right_raw_page,
-                                                                            heap_page_types::page_id right_pid, int *temp_keys,
+                                                                            buffer_manager_types::Page *right_raw_page, int *temp_keys,
                                                                             heap_page_types::RID *temp_rids) {
 
     // As internal node and new leaf are created in this process, new frame should be brought into index_frame and managed here, also
@@ -191,7 +187,6 @@ access_methods::split_res access_methods::Access_methods::bptree_leaf_split(buff
 
     new_leaf_page->is_leaf = true;
     // right_raw_page->page_id = right_pid;
-
     memset(old_leaf_page->keys, 0, sizeof(int) * btree_page_types::MAX_KEYS);
     memset(old_leaf_page->data.leaf_node.values, 0, sizeof(heap_page_types::RID) * btree_page_types::MAX_KEYS);
 
@@ -211,6 +206,6 @@ access_methods::split_res access_methods::Access_methods::bptree_leaf_split(buff
     old_leaf_page->key_count = left_size;
     new_leaf_page->key_count = right_size;
 
-    struct split_res res = {new_leaf_page->keys[0], right_pid};
+    struct split_res res = {new_leaf_page->keys[0], right_raw_page->page_id};
     return res;
 }

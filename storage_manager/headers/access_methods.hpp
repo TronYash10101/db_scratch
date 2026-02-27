@@ -35,21 +35,18 @@ class Access_methods {
 
     /* Pages can be NULL */
     std::optional<access_methods::split_res> bptree_leaf_insert(buffer_manager_types::Page *left_raw_page,
-                                                                buffer_manager_types::Page *right_raw_page,
-                                                                heap_page_types::page_id left_pid, btree_page_types::node_id right_pid,
-                                                                int key, heap_page_types::RID rid);
+                                                                buffer_manager_types::Page *right_raw_page, int key,
+                                                                heap_page_types::RID rid);
 
     std::optional<access_methods::split_res> bptree_internal_insert(buffer_manager_types::Page *left_raw_page,
                                                                     buffer_manager_types::Page *right_raw_page,
-                                                                    btree_page_types::node_id left_pid, heap_page_types::page_id right_pid,
                                                                     btree_page_types::node_id child_pid, int key);
 
     access_methods::split_res bptree_internal_split(buffer_manager_types::Page *left_raw_page, buffer_manager_types::Page *right_raw_page,
-                                                    heap_page_types::page_id right_pid, int *temp_keys,
-                                                    heap_page_types::page_id *temp_child_id);
+                                                    int *temp_keys, heap_page_types::page_id *temp_child_id);
 
     access_methods::split_res bptree_leaf_split(buffer_manager_types::Page *left_raw_page, buffer_manager_types::Page *right_raw_page,
-                                                heap_page_types::page_id right_pid, int *temp_keys, heap_page_types::RID *temp_rids);
+                                                int *temp_keys, heap_page_types::RID *temp_rids);
 
     void index_scan();
 };

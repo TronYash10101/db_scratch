@@ -17,9 +17,9 @@ enum page_type { HEAP_PAGE, INDEX_PAGE };
 // namespace buffer_manager_types
 namespace buffer_manager_types {
 
-constexpr std::size_t buffer_size = 16;
-constexpr std::size_t MAX_HEAP_PAGES = 32;
-constexpr std::size_t MAX_INDEX_PAGES = 32;
+constexpr std::size_t buffer_size = 50;
+constexpr std::size_t MAX_HEAP_PAGES = 100;
+constexpr std::size_t MAX_INDEX_PAGES = 100;
 typedef size_t frame_id;
 constexpr frame_id INVALID_FRAME = static_cast<frame_id>(-1);
 constexpr frame_id INVALID_PAGE_ID = static_cast<frame_id>(-1);
@@ -111,6 +111,9 @@ struct Node {
     void init() {
         this->key_count = 0;
         this->is_leaf = true;
+        if (this->is_leaf) {
+            this->data.leaf_node.next_leaf = buffer_manager_types::INVALID_PAGE_ID;
+        }
     }
     // overall Node constructor based on union type
     Node(bool leaf = true) : is_leaf(leaf), key_count(0), data(){};

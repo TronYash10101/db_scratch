@@ -17,7 +17,7 @@ buffer_manager_types::Page *buffer_manager::buffer_pool::page_access(heap_page_t
 
     if (it != table.end()) {
         frames[it->second].pin_count += 1;
-        std::cout << "\nPage Found\n";
+        // std::cout << "\nPage Found\n";
         return &frames[it->second];
     } else {
         for (auto i = 0; i != frames.size(); ++i) {
