@@ -78,6 +78,7 @@ class Disk_operator {
 
     uintmax_t last_pid(diskoperator_types::page_type type) {
         if (type == diskoperator_types::HEAP_PAGE) {
+
             return std::filesystem::file_size(db_path) / PAGE_SIZE;
         } else if (type == diskoperator_types::INDEX_PAGE) {
             return std::filesystem::file_size(index_path) / PAGE_SIZE;

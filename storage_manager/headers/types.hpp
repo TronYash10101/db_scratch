@@ -63,7 +63,7 @@ struct HeapPage {
     Slot slots[MAX_SLOTS];
     char data[buffer_manager_types::page_data_size];
 
-    // Just because of raw pointer operation
+    // DO NOT INITIALIZE YOURSELF, USED INTERNALLY
     void initialize() {
         page_header.free_size = buffer_manager_types::page_data_size;
         page_header.slot_count = 0;

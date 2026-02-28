@@ -8,7 +8,7 @@ add_executable(db_scratch
     storage_manager/buffer_manager.cpp
     storage_manager/disk_operator.cpp
     storage_manager/access_methods.cpp
-    storage_manager/writer.cpp
+    storage_manager/heap_writer.cpp
 )
 
 # 2. Tell CMake where to find header files

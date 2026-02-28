@@ -1,6 +1,5 @@
 #include "headers/buffer_manager.hpp"
 #include "headers/disk_operator.hpp"
-#include "headers/writer.hpp"
 #include <stdexcept>
 
 buffer_manager::buffer_pool::buffer_pool(const std::string &db_filename, const std::string &index_filename)
@@ -85,7 +84,21 @@ buffer_manager_types::frame_id buffer_manager::buffer_pool::page_replacement_pol
     throw std::runtime_error("All pages are pinned");
 };
 
-uintmax_t buffer_manager::buffer_pool::get_last_pid(diskoperator_types::page_type type) { return disk_operator.last_pid(type); }
+uintmax_t buffer_manager::buffer_pool::get_last_pid(diskoperator_types::page_type type) {
+    uintmax_t lpid = disk_operator.last_pid(type);
+    if (type == diskoperator_types::HEAP_PAGE) {
+        heap_page_types::HeapPage *prev_page =
+                reinterpret_cast<heap_page_types::HeapPage *>(page_access(lpid - 1, diskoperator_types::HEAP_PAGE)->page_data);
+
+        if (prev_page->page_header.free_size > 0) {
+            return lpid - 1;
+        } else {
+            return lpid;
+        }
+    } else {
+        return lpid;
+    }
+}
 
 void buffer_manager::buffer_pool::dp_write_page(buffer_manager_types::Page *page, diskoperator_types::page_type type) {
 
