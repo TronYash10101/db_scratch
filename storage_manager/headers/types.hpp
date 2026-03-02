@@ -46,6 +46,7 @@ constexpr int MAX_SLOTS = 10;
 struct PageHeader {
     int free_size = buffer_manager_types::page_data_size;
     int slot_count = 0;
+    bool is_initialized = false;
 };
 #pragma pack(pop)
 
@@ -65,6 +66,7 @@ struct HeapPage {
 
     // DO NOT INITIALIZE YOURSELF, USED INTERNALLY
     void initialize() {
+        page_header.is_initialized = true;
         page_header.free_size = buffer_manager_types::page_data_size;
         page_header.slot_count = 0;
     }

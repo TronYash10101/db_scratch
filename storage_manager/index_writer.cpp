@@ -1,14 +1,14 @@
 #include "headers/index_writer.hpp"
 
-buffer_manager_types::Page *start(buffer_manager::buffer_pool &buff_pool, buffer_manager_types::Page *root_page,
-                                  index_write::root_struct curr_root) {
+buffer_manager_types::Page *index_write::start(buffer_manager::buffer_pool &buff_pool, buffer_manager_types::Page *root_page,
+                                               index_write::root_struct curr_root) {
     heap_page_types::page_id root_pid = curr_root.root_pid;
 
     root_page = buff_pool.page_access(root_pid, diskoperator_types::INDEX_PAGE);
 
     return root_page;
 }
-buffer_manager_types::Page *fetch_page(buffer_manager::buffer_pool &buff_pool) {
+buffer_manager_types::Page *index_write::fetch_page(buffer_manager::buffer_pool &buff_pool) {
 
     /* Fetches init INDEX page */
 
@@ -21,19 +21,19 @@ buffer_manager_types::Page *fetch_page(buffer_manager::buffer_pool &buff_pool) {
     return p1;
 }
 
-std::optional<access_methods::split_res> index_insert(buffer_manager::buffer_pool &buff_pool,
-                                                      access_methods::Access_methods &access_methods, heap_page_types::page_id curr_pid,
-                                                      int key, heap_page_types::RID rid, index_write::root_struct *curr_root) {
+std::optional<access_methods::split_res> index_write::index_insert(buffer_manager::buffer_pool &buff_pool,
+                                                                   access_methods::Access_methods &access_methods,
+                                                                   heap_page_types::page_id curr_pid, int key, heap_page_types::RID rid,
+                                                                   index_write::root_struct *curr_root) {
 
     buffer_manager_types::Page *curr_page = buff_pool.page_access(curr_pid, diskoperator_types::INDEX_PAGE);
     btree_page_types::Node *node = reinterpret_cast<btree_page_types::Node *>(curr_page->page_data);
     heap_page_types::page_id next_pid;
     std::optional<access_methods::split_res> res;
     std::optional<access_methods::split_res> child_node_ans;
-
     if (node->is_leaf) {
 
-        buffer_manager_types::Page *leaf_page = buff_pool.page_access(curr_pid, diskoperator_types::INDEX_PAGE);
+        // buffer_manager_types::Page *leaf_page = buff_pool.page_access(curr_pid, diskoperator_types::INDEX_PAGE);
         buffer_manager_types::Page *new_page = NULL;
         btree_page_types::Node *new_page_node = NULL;
         if (node->key_count == btree_page_types::MAX_KEYS) {
@@ -42,8 +42,8 @@ std::optional<access_methods::split_res> index_insert(buffer_manager::buffer_poo
             new_page_node->init();
             new_page->dirty_bit = true;
         }
-        res = access_methods.bptree_leaf_insert(leaf_page, new_page, key, rid);
-        leaf_page->dirty_bit = true;
+        res = access_methods.bptree_leaf_insert(curr_page, new_page, key, rid);
+        curr_page->dirty_bit = true;
 
     } else if (node->is_leaf == false) {
 
@@ -76,7 +76,7 @@ std::optional<access_methods::split_res> index_insert(buffer_manager::buffer_poo
 
         new_root_node->data.internal_node.child_nodes[0] = curr_page->page_id;
         new_root_node->data.internal_node.child_nodes[1] = res->child_pid;
-        std::cout << curr_page->page_id << " " << res->child_pid;
+        // std::cout << curr_page->page_id << " " << res->child_pid;
     } else if (res.has_value() && curr_pid != curr_root->root_pid) {
         return res;
     }

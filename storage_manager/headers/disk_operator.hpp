@@ -60,7 +60,7 @@ class Disk_operator {
         }
     }
 
-    void write_page(int pid, bool &dirty_bit, const char *write_data, diskoperator_types::page_type type) {
+    void write_page(int pid, const char *write_data, diskoperator_types::page_type type) {
         FILE *file = (type == diskoperator_types::HEAP_PAGE) ? db_file : index_file;
 
         int offset = pid * PAGE_SIZE;
@@ -78,7 +78,6 @@ class Disk_operator {
 
     uintmax_t last_pid(diskoperator_types::page_type type) {
         if (type == diskoperator_types::HEAP_PAGE) {
-
             return std::filesystem::file_size(db_path) / PAGE_SIZE;
         } else if (type == diskoperator_types::INDEX_PAGE) {
             return std::filesystem::file_size(index_path) / PAGE_SIZE;

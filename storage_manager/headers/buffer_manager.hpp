@@ -8,6 +8,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <queue>
 #include <stdexcept>
@@ -30,6 +32,8 @@ class buffer_pool {
 
     Queue_t replacement_check_queue;
     Disk_operator disk_operator;
+    const std::string &heap_filepath;
+    const std::string &index_filepath;
 
   public:
     // MUST declare the constructor here if you define it in the cpp
@@ -47,9 +51,9 @@ class buffer_pool {
 
     void dp_read_page(buffer_manager_types::Page *page, diskoperator_types::page_type type);
 
-    void final_write(diskoperator_types::page_type type);
+    void final_write();
 
-    ~buffer_pool() { final_write(diskoperator_types::INDEX_PAGE); }
+    ~buffer_pool() { final_write(); }
 };
 }; // namespace buffer_manager
 

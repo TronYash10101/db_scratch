@@ -4,11 +4,13 @@ project(my_project VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_BUILD_TYPE Debug)
 # 1. Define the executable with ALL .cpp files
 add_executable(db_scratch
-    test/bp_tree_test.cpp
+    daemon.cpp
     storage_manager/buffer_manager.cpp
     storage_manager/disk_operator.cpp
     storage_manager/access_methods.cpp
     storage_manager/heap_writer.cpp
+    storage_manager/index_writer.cpp
+    storage_manager/insert.cpp
 )
 
 # 2. Tell CMake where to find header files

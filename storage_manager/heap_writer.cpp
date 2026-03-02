@@ -4,14 +4,14 @@
 #include <iostream>
 #include <stdexcept>
 
-void heap_write(heap_page_types::HeapPage *heap_page, const access_methods_types::row_t &row) {
+heap_page_types::Slot heap_writer::heap_write(char *raw_heap_page, const access_methods_types::row_t &row) {
 
-    // heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(raw_buffer);
+    heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(raw_heap_page);
 
-    if (heap_page->page_header.free_size == buffer_manager_types::page_data_size) {
+    if (heap_page->page_header.is_initialized == false) {
+        std::cout << "INITIALIZED PAGE";
         heap_page->initialize();
     }
-
     // header fill
     if (heap_page->page_header.slot_count < heap_page_types::MAX_SLOTS) {
         heap_page->page_header.slot_count += 1;
@@ -31,8 +31,10 @@ void heap_write(heap_page_types::HeapPage *heap_page, const access_methods_types
     // Data fill
     memcpy(heap_page->data + heap_page->slots[heap_page->page_header.slot_count - 1].slot_offset, &row,
            sizeof(access_methods_types::row_t));
+
+    return heap_page->slots[heap_page->page_header.slot_count - 1];
 }
-void delete_slot(buffer_manager::buffer_pool &buff_pool, heap_page_types::RID rid) {
+void heap_writer::delete_slot(buffer_manager::buffer_pool &buff_pool, heap_page_types::RID rid) {
     heap_page_types::HeapPage *heap_page_data =
             reinterpret_cast<heap_page_types::HeapPage *>(buff_pool.page_access(rid.pid, diskoperator_types::HEAP_PAGE)->page_data);
 

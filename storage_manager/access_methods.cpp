@@ -57,6 +57,7 @@ std::optional<access_methods::split_res> access_methods::Access_methods::bptree_
         if (index_page->key_count == 0) {
             index_page->key_count = 1;
             index_page->keys[index_page->key_count - 1] = key;
+            index_page->data.leaf_node.values[index_page->key_count - 1] = rid;
             /* if (index_page->pid == buffer_manager_types::INVALID_PAGE_ID) {
                 index_page->pid = left_pid;
             } */
@@ -90,6 +91,9 @@ std::optional<access_methods::split_res> access_methods::Access_methods::bptree_
 
         temp_keys[i + 1] = key;
         temp_rids[i + 1] = rid;
+        if (right_raw_page == NULL) {
+            throw std::runtime_error("RIGHT RAW PAGE RECIEVED NULL");
+        }
         return bptree_leaf_split(left_raw_page, right_raw_page, temp_keys, temp_rids);
     }
     return std::nullopt;
