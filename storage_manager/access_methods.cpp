@@ -213,3 +213,33 @@ access_methods::split_res access_methods::Access_methods::bptree_leaf_split(buff
     struct split_res res = {new_leaf_page->keys[0], right_raw_page->page_id};
     return res;
 }
+
+heap_page_types::RID access_methods::Access_methods::bptree_scan(buffer_manager::buffer_pool &buff_pool,
+                                                                 const heap_page_types::page_id curr_root_pid,
+                                                                 const heap_page_types::page_id key) {
+
+    buffer_manager_types::Page *curr_raw_page = buff_pool.page_access(curr_root_pid, diskoperator_types::INDEX_PAGE);
+    btree_page_types::Node *curr_page = reinterpret_cast<btree_page_types::Node *>(curr_raw_page->page_data);
+
+    while (!curr_page->is_leaf) {
+        int i = 0;
+        while (i < curr_page->key_count && key >= curr_page->keys[i]) {
+            i++;
+        }
+        curr_raw_page = buff_pool.page_access(curr_page->data.internal_node.child_nodes[i], diskoperator_types::INDEX_PAGE);
+        curr_page = reinterpret_cast<btree_page_types::Node *>(curr_raw_page->page_data);
+        buff_pool.un_pin(curr_raw_page->page_id, diskoperator_types::INDEX_PAGE);
+    }
+    // std::cout << curr_root_page->keys[0];
+    // Does not support range-value scan yet
+    if (curr_page->is_leaf) {
+        for (int entry = 0; entry < curr_page->key_count; entry++) {
+            if (curr_page->keys[entry] == key) {
+                return curr_page->data.leaf_node.values[entry];
+            }
+        }
+        throw std::runtime_error("NO SUCH ENTRY FOUND");
+    } else {
+        throw std::runtime_error("SOME ERROR OCCRUCED WHILE INDEX SCANNIG");
+    }
+}

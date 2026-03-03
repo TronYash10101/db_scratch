@@ -1,3 +1,4 @@
+#include "storage_manager/headers/index_writer.hpp"
 #include "storage_manager/headers/insert.hpp"
 #include "storage_manager/headers/types.hpp"
 #include <cstdio>
@@ -5,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 int main() {
     std::filesystem::path heap_filepath = std::filesystem::current_path() / "heap.bin";
@@ -19,25 +21,24 @@ int main() {
     access_methods::Access_methods access_methods;
 
     // key on column x
-    access_methods_types::row_t row1 = {5, 6};
+    // access_methods_types::row_t row1 = {5, 6};
 
-    heap_page_types::page_id root_id = insert::create_entry(buff_pool, access_methods, row1);
-
-    buffer_manager_types::Page *root_pg = buff_pool.page_access(root_id, diskoperator_types::INDEX_PAGE);
-    btree_page_types::Node *root_n = reinterpret_cast<btree_page_types::Node *>(root_pg);
-
-    while (!root_n->is_leaf) {
-        root_pg = buff_pool.page_access(root_n->data.internal_node.child_nodes[0], diskoperator_types::INDEX_PAGE);
-        root_n = reinterpret_cast<btree_page_types::Node *>(root_pg->page_data);
+    index_write::root_struct curr_root;
+    curr_root.root_pid = buffer_manager_types::INVALID_PAGE_ID;
+    std::vector<access_methods_types::row_t> entries = {{5, 6}, {1, 2}, {3, 4}, {34, 23}, {12, 90}};
+    heap_page_types::page_id root_id;
+    buffer_manager_types::Page *root_page = index_write::fetch_page(buff_pool);
+    for (const access_methods_types::row_t row : entries) {
+        root_id = insert::create_entry(buff_pool, access_methods, row, curr_root);
     }
-    heap_page_types::page_id to_find_pid = root_n->data.leaf_node.values[0].pid;
-    heap_page_types::Slot to_find_slot = root_n->data.leaf_node.values[0].slot;
 
-    buffer_manager_types::Page *to_pg = buff_pool.page_access(to_find_pid, diskoperator_types::HEAP_PAGE);
+    heap_page_types::RID res_rid = access_methods.bptree_scan(buff_pool, root_id, 3);
+
+    buffer_manager_types::Page *to_pg = buff_pool.page_access(res_rid.pid, diskoperator_types::HEAP_PAGE);
     heap_page_types::HeapPage *xz = reinterpret_cast<heap_page_types::HeapPage *>(to_pg->page_data);
-    access_methods_types::row_t *res_row = reinterpret_cast<access_methods_types::row_t *>(to_pg->page_data + to_find_slot.slot_offset);
+    access_methods_types::row_t *res_row = reinterpret_cast<access_methods_types::row_t *>(xz->data + res_rid.slot.slot_offset);
 
-    std::cout << res_row->x;
+    std::cout << "X: " << res_row->x << "Y: " << res_row->y;
 
     return 0;
 }

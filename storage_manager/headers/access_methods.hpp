@@ -48,7 +48,8 @@ class Access_methods {
     access_methods::split_res bptree_leaf_split(buffer_manager_types::Page *left_raw_page, buffer_manager_types::Page *right_raw_page,
                                                 int *temp_keys, heap_page_types::RID *temp_rids);
 
-    void index_scan();
+    heap_page_types::RID bptree_scan(buffer_manager::buffer_pool &buff_pool, const heap_page_types::page_id curr_root_pid,
+                                     const heap_page_types::page_id key);
 };
 } // namespace access_methods
 #endif

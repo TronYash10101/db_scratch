@@ -35,8 +35,8 @@ heap_page_types::Slot heap_writer::heap_write(char *raw_heap_page, const access_
     return heap_page->slots[heap_page->page_header.slot_count - 1];
 }
 void heap_writer::delete_slot(buffer_manager::buffer_pool &buff_pool, heap_page_types::RID rid) {
-    heap_page_types::HeapPage *heap_page_data =
-            reinterpret_cast<heap_page_types::HeapPage *>(buff_pool.page_access(rid.pid, diskoperator_types::HEAP_PAGE)->page_data);
+    buffer_manager_types::Page *page = buff_pool.page_access(rid.pid, diskoperator_types::HEAP_PAGE);
+    heap_page_types::HeapPage *heap_page_data = reinterpret_cast<heap_page_types::HeapPage *>(page->page_data);
 
     uint16_t offset = rid.slot.slot_offset;
 
@@ -44,7 +44,11 @@ void heap_writer::delete_slot(buffer_manager::buffer_pool &buff_pool, heap_page_
 
     if (del_slot->deleted != true) {
         del_slot->deleted = true;
+        page->dirty_bit = true;
     } else {
+        buff_pool.un_pin(rid.pid, diskoperator_types::HEAP_PAGE);
         throw std::runtime_error("Already Deleted(double delete)");
     }
+
+    buff_pool.un_pin(rid.pid, diskoperator_types::HEAP_PAGE);
 }

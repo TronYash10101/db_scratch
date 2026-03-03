@@ -19,7 +19,9 @@
 
 namespace buffer_manager {
 
-typedef std::unordered_map<heap_page_types::page_id, buffer_manager_types::frame_id> Table_t;
+// Key pages by (type,pid) to avoid heap/index PID collisions.
+typedef std::uint64_t PageKey;
+typedef std::unordered_map<PageKey, buffer_manager_types::frame_id> Table_t;
 typedef std::queue<buffer_manager_types::frame_id> Queue_t;
 typedef std::vector<buffer_manager_types::Page> Frame_t;
 typedef std::vector<heap_page_types::page_id> page_list;
@@ -34,6 +36,10 @@ class buffer_pool {
     Disk_operator disk_operator;
     const std::string &heap_filepath;
     const std::string &index_filepath;
+
+    static PageKey make_key(heap_page_types::page_id pid, diskoperator_types::page_type type) {
+        return (static_cast<PageKey>(type) << 32) | static_cast<std::uint32_t>(pid);
+    }
 
   public:
     // MUST declare the constructor here if you define it in the cpp
