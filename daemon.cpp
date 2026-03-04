@@ -1,45 +1,44 @@
-#include "storage_manager/headers/writer.hpp"
+#include "storage_manager/headers/index_writer.hpp"
+#include "storage_manager/headers/insert.hpp"
+#include "storage_manager/headers/types.hpp"
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 int main() {
     std::filesystem::path heap_filepath = std::filesystem::current_path() / "heap.bin";
     std::filesystem::path index_filepath = std::filesystem::current_path() / "index.bin";
 
-    std::cout << heap_filepath << "\n";
+    std::ofstream file1(index_filepath, std::ios::binary | std::ios::out | std::ios::trunc);
+    std::ofstream file2(heap_filepath, std::ios::binary | std::ios::out | std::ios::trunc);
+    file1.close();
+    file2.close();
 
-    auto buff_pool = std::make_unique<buffer_manager::buffer_pool>(heap_filepath.string(), index_filepath.string());
+    buffer_manager::buffer_pool buff_pool(heap_filepath, index_filepath);
+    access_methods::Access_methods access_methods;
 
-    /* auto heap_table = std::make_unique<access_methods::Access_methods>();
+    // key on column x
+    // access_methods_types::row_t row1 = {5, 6};
 
-    buffer_manager::Page *page = buff_pool->page_access(4);
-    heap_table->heap_table_push(4);
+    index_write::root_struct curr_root;
+    curr_root.root_pid = buffer_manager_types::INVALID_PAGE_ID;
+    std::vector<access_methods_types::row_t> entries = {{5, 6}, {1, 2}, {3, 4}, {34, 23}, {12, 90}};
+    heap_page_types::page_id root_id;
+    buffer_manager_types::Page *root_page = index_write::fetch_page(buff_pool);
+    for (const access_methods_types::row_t row : entries) {
+        root_id = insert::create_entry(buff_pool, access_methods, row, curr_root);
+    }
 
-    buffer_manager::HeapPage *heap_page_t = reinterpret_cast<buffer_manager::HeapPage *>(page);
+    heap_page_types::RID res_rid = access_methods.bptree_scan(buff_pool, root_id, 3);
 
-    access_methods::row_t row1 = {1, 5};
+    buffer_manager_types::Page *to_pg = buff_pool.page_access(res_rid.pid, diskoperator_types::HEAP_PAGE);
+    heap_page_types::HeapPage *xz = reinterpret_cast<heap_page_types::HeapPage *>(to_pg->page_data);
+    access_methods_types::row_t *res_row = reinterpret_cast<access_methods_types::row_t *>(xz->data + res_rid.slot.slot_offset);
 
-    heap_write(page->page_data, row1);
+    std::cout << "X: " << res_row->x << "Y: " << res_row->y;
 
-    // testing sargs
-    access_methods::SARG s1 = {access_methods::X, access_methods::EQ, 1};
-    std::optional<access_methods::RID> res = heap_table->heap_scan(*buff_pool, s1);
-    if (res.has_value()) {
-        buffer_manager::Page *res_page = buff_pool->page_access(res->pid);
-
-        buffer_manager::HeapPage *hp = reinterpret_cast<buffer_manager::HeapPage *>(res_page->page_data);
-
-        if (res->slot.deleted != false) {
-            access_methods::row_t *pd = reinterpret_cast<access_methods::row_t *>(hp->data + res->slot.slot_offset);
-            std::cout << "x: " << pd->x << "y: " << pd->y;
-        } else {
-
-            std::cout << "deleted";
-        }
-    } else {
-        std::cout << "No match found";
-    } */
     return 0;
 }

@@ -2,84 +2,65 @@
 #define BUFFER_MANAGER
 
 #include "disk_operator.hpp"
+#include "types.hpp"
 #include <chrono>
 #include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <queue>
 #include <stdexcept>
+#include <stdio.h>
 #include <unordered_map>
 #include <vector>
 
 namespace buffer_manager {
 
-constexpr std::size_t buffer_size = 16;
-constexpr std::size_t MAX_HEAP_PAGES = 32;
-constexpr std::size_t MAX_INDEX_PAGES = 32;
-typedef size_t page_id;
-typedef size_t frame_id;
-constexpr frame_id INVALID_FRAME = static_cast<frame_id>(-1);
-constexpr frame_id INVALID_PAGE_ID = static_cast<frame_id>(-1);
-constexpr std::size_t page_data_size = 4096;
-constexpr int MAX_SLOTS = 10;
-
-// single page size
-#pragma pack(push, 1)
-struct PageHeader {
-    int free_size = page_data_size;
-    int slot_count = 0;
-};
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-struct Slot {
-    int slot_size;
-    uint16_t slot_offset;
-    bool deleted = false;
-};
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-struct HeapPage {
-    PageHeader page_header;
-    Slot slots[MAX_SLOTS];
-    char data[page_data_size];
-
-    // Just because of raw pointer operation
-    void initialize() {
-        page_header.free_size = page_data_size;
-        page_header.slot_count = 0;
-    }
-};
-#pragma pack(pop)
-
-constexpr std::size_t page_size = sizeof(HeapPage);
-
-struct Page {
-    char page_data[page_size];
-    size_t page_id = INVALID_PAGE_ID; // gives the max value of size_t
-    bool dirty_bit = false;
-    int pin_count = 0;
-};
+// Key pages by (type,pid) to avoid heap/index PID collisions.
+typedef std::uint64_t PageKey;
+typedef std::unordered_map<PageKey, buffer_manager_types::frame_id> Table_t;
+typedef std::queue<buffer_manager_types::frame_id> Queue_t;
+typedef std::vector<buffer_manager_types::Page> Frame_t;
+typedef std::vector<heap_page_types::page_id> page_list;
 
 class buffer_pool {
   private:
-    std::vector<Page> frames;
-    std::unordered_map<page_id, frame_id> page_table;
-    std::queue<frame_id> replacement_check_queue;
+    Frame_t frames;
+
+    Table_t table;
+
+    Queue_t replacement_check_queue;
     Disk_operator disk_operator;
+    const std::string &heap_filepath;
+    const std::string &index_filepath;
+
+    static PageKey make_key(heap_page_types::page_id pid, diskoperator_types::page_type type) {
+        return (static_cast<PageKey>(type) << 32) | static_cast<std::uint32_t>(pid);
+    }
 
   public:
     // MUST declare the constructor here if you define it in the cpp
     buffer_pool(const std::string &db_filename, const std::string &index_filename);
 
-    frame_id page_replacement_policy();
-    buffer_manager::Page *page_access(page_id pid);
-    void un_pin(int pid);
-};
+    buffer_manager_types::Page *page_access(heap_page_types::page_id pid, diskoperator_types::page_type type);
 
+    buffer_manager_types::frame_id page_replacement_policy(diskoperator_types::page_type type);
+
+    void un_pin(heap_page_types::page_id pid, diskoperator_types::page_type type);
+
+    uintmax_t get_last_pid(diskoperator_types::page_type type);
+
+    void dp_write_page(buffer_manager_types::Page *page, diskoperator_types::page_type type);
+
+    void dp_read_page(buffer_manager_types::Page *page, diskoperator_types::page_type type);
+
+    void final_write();
+
+    ~buffer_pool() { final_write(); }
+};
 }; // namespace buffer_manager
 
 #endif

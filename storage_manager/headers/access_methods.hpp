@@ -2,67 +2,26 @@
 #define ACCESS_METHODS
 
 #include "buffer_manager.hpp"
+#include "types.hpp"
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
 #include <vector>
-
 namespace access_methods {
-
-constexpr int node_size = 4096; // bytes
-constexpr int MAX_KEYS = (node_size / 2) - 1;
-constexpr int CHILD_NODES = (node_size / 2);
-
-// Stored in heap page
-struct row_t {
-    // int primary_key;
-    int x = 0;
-    int y = 0;
+struct split_res {
+    int promoted_key;
+    btree_page_types::node_id child_pid;
 };
-
-typedef struct {
-    buffer_manager::page_id pid;
-    buffer_manager::Slot slot;
-} RID;
-
-struct internal_node_page {
-    int key_count = 0;
-    int keys[MAX_KEYS];
-    buffer_manager::Page child_node[MAX_KEYS + 1];
-};
-struct leaf_node {
-    int keys[MAX_KEYS];
-    row_t rids[MAX_KEYS];
-    buffer_manager::Page adjecent_node_id;
-};
-typedef enum { X, Y } col_type;
-typedef enum { EQ, GT, LS } op_type;
-
-struct SARG {
-    col_type col;
-    op_type op;
-    int constant;
-
-    bool match(row_t &match_to_row) const {
-        int value = (col == X) ? match_to_row.x : match_to_row.y;
-        switch (op) {
-        case EQ:
-            return (value == constant);
-        case GT:
-            return (value > constant);
-        case LS:
-            return (value < constant);
-        default:
-            return false;
-        }
-    };
-};
-
+// struct internal_split_res {
+//     int promoted_key;
+//     btree_page_types::node_id new_pid;
+// };
 class Access_methods {
   private:
-    std::vector<buffer_manager::page_id> HeapTable;
+    std::vector<heap_page_types::page_id> HeapTable;
 
   public:
     explicit Access_methods();
@@ -70,16 +29,27 @@ class Access_methods {
     // Only scans the heap page for matching tuple, if found return an iterator
     // to it else NULL (Don't try to mix data storing logic here, assume correct
     // is present)
-    std::optional<RID> heap_scan(buffer_manager::buffer_pool &buff_pool, SARG sarg);
+    std::optional<heap_page_types::RID> heap_scan(buffer_manager::buffer_pool &buff_pool, access_methods_types::SARG sarg);
 
-    void heap_table_push(buffer_manager::page_id pid);
+    void heap_table_push(heap_page_types::page_id pid);
 
-    void init_btree();
-    void index_scan();
+    /* Pages can be NULL */
+    std::optional<access_methods::split_res> bptree_leaf_insert(buffer_manager_types::Page *left_raw_page,
+                                                                buffer_manager_types::Page *right_raw_page, int key,
+                                                                heap_page_types::RID rid);
 
-    // Pair this with heap_writer
+    std::optional<access_methods::split_res> bptree_internal_insert(buffer_manager_types::Page *left_raw_page,
+                                                                    buffer_manager_types::Page *right_raw_page,
+                                                                    btree_page_types::node_id child_pid, int key);
+
+    access_methods::split_res bptree_internal_split(buffer_manager_types::Page *left_raw_page, buffer_manager_types::Page *right_raw_page,
+                                                    int *temp_keys, heap_page_types::page_id *temp_child_id);
+
+    access_methods::split_res bptree_leaf_split(buffer_manager_types::Page *left_raw_page, buffer_manager_types::Page *right_raw_page,
+                                                int *temp_keys, heap_page_types::RID *temp_rids);
+
+    heap_page_types::RID bptree_scan(buffer_manager::buffer_pool &buff_pool, const heap_page_types::page_id curr_root_pid,
+                                     const heap_page_types::page_id key);
 };
-
 } // namespace access_methods
-
 #endif
