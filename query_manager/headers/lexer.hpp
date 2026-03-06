@@ -22,6 +22,8 @@ std::vector<lexer::Token> _lexer(const std::string &query);
 
 void whitespace_split(const std::string &input, std::vector<Token> &result_arr);
 
+bool check_seperator(char seperator);
+
 } // namespace lexer
 
 #endif
