@@ -21,7 +21,7 @@ std::string enum_print(lexer::TOKEN_TYPE tok) {
 }
 
 int main() {
-    const std::string x = "SELECT a,b FROM T x >= 10 ";
+    const std::string x = "SELECT a,b FROM T x>10";
 
     std::vector<lexer::Token> res = lexer::_lexer(x);
     // std::cout << "here : " << lexer::check_seperator(',');

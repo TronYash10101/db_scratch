@@ -1,9 +1,10 @@
 #include "headers/lexer.hpp"
+#include <stdexcept>
 #include <vector>
 
-bool lexer::check_seperator(char seperator) {
+bool lexer::check_seperator(std::string seperator) {
     // add more later
-    if (seperator == ',') {
+    if (seperator == "," || seperator == ">" || seperator == "=" || seperator == "<" || seperator == "*" || seperator == ";") {
         return true;
     } else {
         return false;
@@ -11,16 +12,31 @@ bool lexer::check_seperator(char seperator) {
 }
 
 void lexer::whitespace_split(const std::string &input, std::vector<Token> &result_arr) {
-    int count = 0;
     std::string curr_word;
-    for (char c : input) {
-        std::string char_str(1, c);
-        if (check_seperator(c) && lexer_table.find(char_str) != lexer_table.end()) {
-            auto it = lexer::lexer_table.find(char_str);
-            result_arr.push_back({it->second, char_str});
+    for (int i = 0; i < input.size(); i++) {
+        std::string char_str(1, input[i]);
+        if (check_seperator(char_str) && lexer_table.find(char_str) != lexer_table.end()) {
+            if (!curr_word.empty())
+                result_arr.push_back({IDENT, curr_word});
             curr_word.clear();
+
+            curr_word.push_back(input[i]);
+            i++;
+            while (i < input.size() && check_seperator(std::string(1, input[i])) &&
+                   (lexer_table.find(std::string(1, input[i])) != lexer_table.end())) {
+                curr_word.push_back(input[i]);
+                i++;
+            }
+            auto combined_op = lexer_table.find(curr_word);
+            if (combined_op != lexer_table.end()) {
+                result_arr.push_back({OPERATOR, curr_word});
+                curr_word.clear();
+                i--; // can remove this and the continue below
+            } else {
+                throw std::runtime_error("INVALID OPERATOR FOUND " + curr_word);
+            }
             continue;
-        } else if (c == ' ') {
+        } else if (input[i] == ' ') {
             auto it = lexer::lexer_table.find(curr_word);
             if (it != lexer::lexer_table.end()) {
                 result_arr.push_back({it->second, curr_word});
@@ -31,7 +47,7 @@ void lexer::whitespace_split(const std::string &input, std::vector<Token> &resul
             continue;
         }
 
-        curr_word.push_back(c);
+        curr_word.push_back(input[i]);
     }
 
     if (!curr_word.empty()) {
