@@ -3,15 +3,15 @@
 #include <string>
 #include <vector>
 
-std::string enum_print(lexer::TOKEN_TYPE tok) {
+std::string enum_print(lexer_types::TOKEN_TYPE tok) {
     switch (tok) {
-    case lexer::OPERATOR:
+    case lexer_types::OPERATOR:
         return "OPERATOR";
         break;
-    case lexer::IDENT:
+    case lexer_types::IDENT:
         return "IDENT";
         break;
-    case lexer::CLAUSE:
+    case lexer_types::CLAUSE:
         return "CLAUSE";
         break;
 
@@ -21,12 +21,11 @@ std::string enum_print(lexer::TOKEN_TYPE tok) {
 }
 
 int main() {
-    const std::string x = "SELECT a,b FROM T x>10";
+    const std::string x = "SELECT a, b FROM T x>10";
 
-    std::vector<lexer::Token> res = lexer::_lexer(x);
-    // std::cout << "here : " << lexer::check_seperator(',');
+    std::vector<lexer_types::Token> res = lexer::lexer(x);
 
-    for (const lexer::Token &ele : res) {
+    for (const lexer_types::Token &ele : res) {
         std::cout << "TOKEN TYPE: " << enum_print(ele.token_type) << " | TOKEN VALUE: " << ele.token_value << "\n";
     }
 }
