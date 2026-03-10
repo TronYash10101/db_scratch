@@ -31,9 +31,7 @@ void lexer::whitespace_split(const std::string &input, std::vector<lexer_types::
             if (combined_op != lexer_types::lexer_table.end()) {
                 result_arr.push_back({lexer_types::OPERATOR, curr_word});
                 curr_word.clear();
-                i--; // can remove this and the continue below
-            } else {
-                throw std::runtime_error("INVALID OPERATOR FOUND " + curr_word);
+                i--;
             }
             continue;
         } else if (input[i] == ' ' && !curr_word.empty()) {
@@ -46,7 +44,10 @@ void lexer::whitespace_split(const std::string &input, std::vector<lexer_types::
             curr_word.clear();
             continue;
         }
-        curr_word.push_back(input[i]);
+        if (input[i] != ' ') {
+            // Insert only when there are no special characters like " "
+            curr_word.push_back(input[i]);
+        }
     }
 
     if (!curr_word.empty()) {

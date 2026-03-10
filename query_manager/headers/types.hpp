@@ -20,7 +20,21 @@ const std::unordered_map<std::string, TOKEN_TYPE> lexer_table = {{"SELECT", CLAU
 } // namespace lexer_types
 
 namespace parser_types {
+
+struct Predicate {
+    std::string col = "";
+    std::string op = "";
+    std::string value = "";
+};
+
+struct AST {
+    std::vector<std::string> cols_name;
+    std::string table_name;
+    Predicate predicate;
+};
+
 inline std::unordered_set<std::string> columns = {"name", "age", "birth"};
+inline std::unordered_set<std::string> table = {"test"};
 
 } // namespace parser_types
 
