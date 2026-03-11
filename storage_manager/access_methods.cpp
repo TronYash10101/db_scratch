@@ -8,44 +8,37 @@
 #include <stdexcept>
 #include <vector>
 
-access_methods::Access_methods::Access_methods() : HeapTable() {}
+access_methods::Access_methods::Access_methods() {}
 
-std::optional<heap_page_types::RID> access_methods::Access_methods::heap_scan(buffer_manager::buffer_pool &buff_pool,
-                                                                              access_methods_types::SARG sarg) {
+std::optional<heap_page_types::RID> access_methods::Access_methods::heap_scan::scan(access_methods_types::SARG sarg) {
 
-    for (auto it = HeapTable.begin(); it != HeapTable.end(); ++it) {
-        heap_page_types::page_id pid = *it;
-        char *heap_page_data = buff_pool.page_access(pid, diskoperator_types::HEAP_PAGE)->page_data;
-        heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(heap_page_data);
+    heap_page_types::RID row_id;
+    bool if_found = false;
 
-        // iterate each tuple and if tuple satisfies SARG return
-        for (int slot = 0; slot < heap_page->page_header.slot_count; slot++) {
-
-            if (heap_page->slots[slot].deleted) {
-                continue;
-            }
-
-            uint16_t size = heap_page->slots[slot].slot_size;
-            uint16_t offset = heap_page->slots[slot].slot_offset;
-            // read
-            access_methods_types::row_t *match_to_row = reinterpret_cast<access_methods_types::row_t *>(heap_page->data + offset);
-            if (sarg.match(*match_to_row)) {
-                heap_page_types::RID row_id;
-                row_id.pid = pid;
-                row_id.slot = heap_page->slots[slot];
-                buff_pool.un_pin(pid, diskoperator_types::HEAP_PAGE);
-                return row_id;
-            } else {
-                std::cout << "No rid ";
-                continue;
-            };
+    char *heap_page_data = buff_pool.page_access(curr_pid, diskoperator_types::HEAP_PAGE)->page_data;
+    heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(heap_page_data);
+    if (!heap_page->slots[curr_slot].deleted) {
+        uint16_t size = heap_page->slots[curr_slot].slot_size;
+        uint16_t offset = heap_page->slots[curr_slot].slot_offset;
+        access_methods_types::row_t *match_to_row = reinterpret_cast<access_methods_types::row_t *>(heap_page->data + offset);
+        if (sarg.match(*match_to_row)) {
+            row_id.pid = curr_pid;
+            row_id.slot = heap_page->slots[curr_slot];
+            if_found = true;
+            buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
         }
-        buff_pool.un_pin(pid, diskoperator_types::HEAP_PAGE);
+    }
+    curr_slot++;
+    if (curr_slot == heap_page->page_header.slot_count - 1) {
+        curr_pid++;
+    }
+    if (if_found) {
+        return row_id;
     }
     return std::nullopt;
 }
 
-void access_methods::Access_methods::heap_table_push(heap_page_types::page_id pid) { HeapTable.push_back(pid); }
+void access_methods::Access_methods::heap_scan::heap_table_push(heap_page_types::page_id pid) { HeapTable.push_back(pid); }
 
 std::optional<access_methods::split_res> access_methods::Access_methods::bptree_leaf_insert(buffer_manager_types::Page *left_raw_page,
                                                                                             buffer_manager_types::Page *right_raw_page,

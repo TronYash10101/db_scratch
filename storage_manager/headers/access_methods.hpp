@@ -21,17 +21,26 @@ struct split_res {
 // };
 class Access_methods {
   private:
-    std::vector<heap_page_types::page_id> HeapTable;
-
   public:
     explicit Access_methods();
 
     // Only scans the heap page for matching tuple, if found return an iterator
     // to it else NULL (Don't try to mix data storing logic here, assume correct
     // is present)
-    std::optional<heap_page_types::RID> heap_scan(buffer_manager::buffer_pool &buff_pool, access_methods_types::SARG sarg);
 
-    void heap_table_push(heap_page_types::page_id pid);
+    class heap_scan {
+      private:
+        std::vector<heap_page_types::page_id> HeapTable;
+        /* Maintains pid & slot of where heap_scan is */
+        int curr_pid = 0;
+        int curr_slot = 0;
+        buffer_manager::buffer_pool &buff_pool;
+
+      public:
+        heap_scan(buffer_manager::buffer_pool &buff_pool) : HeapTable(), buff_pool(buff_pool) { HeapTable.push_back(curr_pid); };
+        std::optional<heap_page_types::RID> scan(access_methods_types::SARG sarg);
+        void heap_table_push(heap_page_types::page_id pid);
+    };
 
     /* Pages can be NULL */
     std::optional<access_methods::split_res> bptree_leaf_insert(buffer_manager_types::Page *left_raw_page,
