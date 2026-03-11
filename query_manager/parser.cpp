@@ -44,6 +44,7 @@ std::vector<std::string> parser::parse_select_clause(parser::token_iterator &tok
     lexer_types::Token sub_tok = tok_it.get_next();
 
     while (1) {
+
         if (sub_tok.token_value == "," && sub_tok.token_type == lexer_types::OPERATOR) {
             lexer_types::Token next = tok_it.get_next();
             if (next.token_type != lexer_types::IDENT && !(next.token_value == "*" && next.token_type == lexer_types::OPERATOR)) {
@@ -52,17 +53,19 @@ std::vector<std::string> parser::parse_select_clause(parser::token_iterator &tok
             sub_tok = next;
             continue;
         } else if (sub_tok.token_value == "*") {
-            return std::vector<std::string>(parser_types::columns.begin(), parser_types::columns.end());
-        } /* else if (parser_types::columns.find(sub_tok.token_value) == parser_types::columns.end()) {
+            for (auto const &[key, value] : parser_types::columns) {
+                returned_columns.push_back(key);
+            }
+            return returned_columns;
+        } else if (parser_types::columns.find(sub_tok.token_value) == parser_types::columns.end()) {
             throw std::runtime_error("NO SUCH COLUMN PRESENT");
-        } */
+        }
 
         if (sub_tok.token_type == lexer_types::IDENT) {
             returned_columns.push_back(sub_tok.token_value);
         } else {
             throw std::runtime_error("EXPECTED IDENTIFIER AFTER" + tok_it.get_prev().token_value);
         }
-
         if (tok_it.peek(1).token_type != lexer_types::IDENT || tok_it.peek(1).token_type != lexer_types::OPERATOR) {
             break;
         }
@@ -87,7 +90,6 @@ parser_types::Predicate parse_where_clause(parser::token_iterator &tok_it) {
 
 std::string parse_from_clause(parser::token_iterator &tok_it) {
     lexer_types::Token sub_token = tok_it.get_next();
-    std::cout << "here " << sub_token.token_value;
     if (parser_types::table.find(sub_token.token_value) != parser_types::table.end()) {
         return sub_token.token_value;
     }
@@ -101,17 +103,14 @@ parser_types::AST parser::grammer_check(parser::token_iterator &tok_it) {
         lexer_types::Token tok = tok_it.get_next();
 
         if (tok.token_value == "SELECT") {
-            std::cout << "es";
             res_ast.cols_name = parse_select_clause(tok_it);
         }
 
         if (tok.token_value == "FROM") {
-            std::cout << "ef";
             res_ast.table_name = parse_from_clause(tok_it);
         }
 
         if (tok.token_value == "WHERE") {
-            std::cout << "ew";
             res_ast.predicate = parse_where_clause(tok_it);
         }
     }

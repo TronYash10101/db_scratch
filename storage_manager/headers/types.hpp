@@ -1,5 +1,5 @@
-#ifndef TYPES
-#define TYPES
+#ifndef STORAGE_TYPES
+#define STORAGE_TYPES
 
 #include <assert.h>
 #include <cstring>
@@ -135,7 +135,7 @@ struct row_t {
 };
 
 typedef enum { X, Y } col_type;
-typedef enum { EQ, GT, LS } op_type;
+typedef enum { EQ, GT, LS, GTE, LSE } op_type;
 
 struct SARG {
     col_type col;
@@ -151,6 +151,10 @@ struct SARG {
             return (value > constant);
         case LS:
             return (value < constant);
+        case GTE:
+            return (value >= constant);
+        case LSE:
+            return (value <= constant);
         default:
             return false;
         }

@@ -36,7 +36,7 @@ int main() {
     } */
 
     {
-        parser::token_iterator it("SELECT name FROM test WHERE x >= 10");
+        parser::token_iterator it("SELECT age FROM test WHERE age >= 10");
 
         parser_types::AST res = parser::grammer_check(it);
         std::cout << "Col names:\n ";
