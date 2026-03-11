@@ -38,7 +38,8 @@ class Access_methods {
 
       public:
         heap_scan(buffer_manager::buffer_pool &buff_pool) : HeapTable(), buff_pool(buff_pool) { HeapTable.push_back(curr_pid); };
-        std::optional<heap_page_types::RID> scan(access_methods_types::SARG sarg);
+        /* Does not return deleted rows  */
+        std::optional<access_methods_types::row_t> scan();
         void heap_table_push(heap_page_types::page_id pid);
     };
 
