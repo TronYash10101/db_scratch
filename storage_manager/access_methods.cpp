@@ -11,21 +11,34 @@
 access_methods::Access_methods::Access_methods() {}
 
 std::optional<access_methods_types::row_t> access_methods::Access_methods::heap_scan::scan() {
-    access_methods_types::row_t *row;
+    access_methods_types::row_t *row = NULL;
 
     char *heap_page_data = buff_pool.page_access(curr_pid, diskoperator_types::HEAP_PAGE)->page_data;
     heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(heap_page_data);
-    if (!heap_page->slots[curr_slot].deleted) {
+
+    if (heap_page == NULL)
+        return std::nullopt;
+
+    if (curr_slot >= heap_page->page_header.slot_count) {
+        buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
+        return std::nullopt;
+    }
+
+    if (heap_page != NULL && !heap_page->slots[curr_slot].deleted) {
         uint16_t offset = heap_page->slots[curr_slot].slot_offset;
         row = reinterpret_cast<access_methods_types::row_t *>(heap_page->data + offset);
-        buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
     }
+
+    buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
+
     if (curr_slot == heap_page->page_header.slot_count - 1) {
         curr_pid++;
         curr_slot = 0;
     } else {
         curr_slot++;
     }
+    if (row == NULL)
+        return std::nullopt;
     return *row;
 }
 

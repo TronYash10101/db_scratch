@@ -2,6 +2,7 @@
 #define STORAGE_TYPES
 
 #include <assert.h>
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <stdint.h>
@@ -127,6 +128,7 @@ struct Node {
 
 // namespace access_methods_types
 namespace access_methods_types {
+
 // Stored in heap page
 struct row_t {
     // int primary_key;

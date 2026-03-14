@@ -8,13 +8,14 @@
 #include <optional>
 #include <vector>
 
+namespace planner {
+
 class Operator {
   protected:
   public:
     virtual std::optional<access_methods_types::row_t> next() = 0;
     virtual void init() = 0;
     virtual void close() = 0;
-    virtual void main();
 };
 
 class Seq_scan : public Operator {
@@ -22,7 +23,7 @@ class Seq_scan : public Operator {
     access_methods::Access_methods &am;
     buffer_manager::buffer_pool &buff_pool;
     access_methods::Access_methods::heap_scan heap_scan;
-    Operator *next_op = NULL; // specifies this is the last op
+    // specifies this is the last op
 
   public:
     Seq_scan(access_methods::Access_methods &access_methods, buffer_manager::buffer_pool &buff_pool)
@@ -63,7 +64,7 @@ class Filter : public Operator {
 
             if (predicate.col == "x") {
                 ret_sarg.col = access_methods_types::X;
-            } else {
+            } else if (predicate.col == "y") {
                 ret_sarg.col = access_methods_types::Y;
             };
             ret_sarg.constant = std::stoi(predicate.value);
@@ -72,19 +73,22 @@ class Filter : public Operator {
             throw;
         }
     };
+    access_methods_types::SARG to_match;
     Operator &next_op;
 
   public:
     Filter(Operator &op, parser_types::Predicate &predicate) : next_op(op), predicate(predicate){};
-    void init() override {};
+    void init() override { to_match = parse_predicate(); };
 
     std::optional<access_methods_types::row_t> next() override {
         /* Checks SARGs */
         std::optional<access_methods_types::row_t> res_row = this->next_op.next();
-        if (res_row.has_value()) {
-            access_methods_types::SARG to_match = parse_predicate();
-            to_match.match(res_row.value());
-            return res_row;
+        while (res_row.has_value()) {
+            if (to_match.match(res_row.value())) {
+                return res_row;
+            }
+
+            res_row = this->next_op.next();
         }
         return std::nullopt;
     };
@@ -106,13 +110,19 @@ class Projection : public Operator {
         std::optional<access_methods_types::row_t> res_row = this->next_op.next();
         if (res_row.has_value()) {
             /* for (const std::string &ele : ast.cols_name) {
-                // Change to handle specific columns based on hash fnc
-            } */
+                            // Change to handle specific columns based on hash fnc
+                                        } */
             return res_row;
         }
         return std::nullopt;
     }
     void close() override {}
 };
+
+std::vector<access_methods_types::row_t> select_plan(std::vector<std::unique_ptr<Operator>> &operators,
+                                                     buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_manager,
+                                                     parser_types::AST &ast);
+
+}; // namespace planner
 
 #endif

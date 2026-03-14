@@ -37,7 +37,7 @@ struct AST {
     Predicate predicate;
 };
 
-const std::unordered_map<std::string, COLUMN_TYPE> columns = {{"name", STRING}, {"age", INTEGER}, {"birth", FLOATING}};
+const std::unordered_map<std::string, COLUMN_TYPE> columns = {{"x", INTEGER}};
 const std::unordered_set<std::string> table = {"test"};
 
 } // namespace parser_types
