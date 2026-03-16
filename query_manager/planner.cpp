@@ -4,7 +4,8 @@
 
 std::vector<access_methods_types::row_t> planner::select_plan(std::vector<std::unique_ptr<Operator>> &operators,
                                                               buffer_manager::buffer_pool &buff_pool,
-                                                              access_methods::Access_methods &access_manager, parser_types::AST &ast) {
+                                                              access_methods::Access_methods &access_manager,
+                                                              parser_types::SELECT_AST &ast) {
 
     std::vector<access_methods_types::row_t> matched_rows;
     operators.reserve(3);
@@ -28,3 +29,5 @@ std::vector<access_methods_types::row_t> planner::select_plan(std::vector<std::u
     std::cout << "scaned all the pages\n";
     return matched_rows;
 }
+
+void planner::insert() {}

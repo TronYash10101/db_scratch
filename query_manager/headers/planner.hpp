@@ -99,10 +99,10 @@ class Filter : public Operator {
 class Projection : public Operator {
   protected:
     Operator &next_op;
-    parser_types::AST &ast;
+    parser_types::SELECT_AST &ast;
 
   public:
-    Projection(Operator &op, parser_types::AST &ast) : next_op(op), ast(ast) {}
+    Projection(Operator &op, parser_types::SELECT_AST &ast) : next_op(op), ast(ast) {}
 
     void init() override {};
     std::optional<access_methods_types::row_t> next() override {
@@ -121,7 +121,9 @@ class Projection : public Operator {
 
 std::vector<access_methods_types::row_t> select_plan(std::vector<std::unique_ptr<Operator>> &operators,
                                                      buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_manager,
-                                                     parser_types::AST &ast);
+                                                     parser_types::SELECT_AST &ast);
+
+void insert();
 
 }; // namespace planner
 

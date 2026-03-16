@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <variant>
 #include <vector>
 
 int main() {
@@ -36,20 +37,40 @@ int main() {
     } */
 
     {
-        parser::token_iterator it("SELECT age FROM test WHERE age >= 10");
+        parser::token_iterator it("SELECT x FROM test WHERE x >= 10");
+        parser::Parser Parser;
+        parser_types::ASTResult res = Parser.grammer_check(it);
+        if (auto select = std::get_if<parser_types::SELECT_AST>(&res)) {
+            std::cout << "Col names:\n ";
+            for (const std::string &ele : select->cols_name) {
+                std::cout << ele << " ";
+            }
+            std::cout << "\n";
 
-        parser_types::AST res = parser::grammer_check(it);
-        std::cout << "Col names:\n ";
-        for (const std::string &ele : res.cols_name) {
-            std::cout << ele << " ";
+            std::cout << "Table: ";
+            std::cout << select->table_name << "\n";
+
+            std::cout << "Predicate: ";
+            std::cout << select->predicate.col << select->predicate.op << select->predicate.value << "\n";
         }
-        std::cout << "\n";
+    }
+    {
+        parser::token_iterator it("INSERT INTO test VALUES (1,2)");
+        parser::Parser Parser;
+        parser_types::ASTResult res = Parser.grammer_check(it);
+        if (auto select = std::get_if<parser_types::SELECT_AST>(&res)) {
+            std::cout << "Col names:\n ";
+            for (const std::string &ele : select->cols_name) {
+                std::cout << ele << " ";
+            }
+            std::cout << "\n";
 
-        std::cout << "Table: ";
-        std::cout << res.table_name << "\n";
+            std::cout << "Table: ";
+            std::cout << select->table_name << "\n";
 
-        std::cout << "Predicate: ";
-        std::cout << res.predicate.col << res.predicate.op << res.predicate.value << "\n";
+            std::cout << "Predicate: ";
+            std::cout << select->predicate.col << select->predicate.op << select->predicate.value << "\n";
+        }
     }
 
     std::cout << "parser tests passed\n";

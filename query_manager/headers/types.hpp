@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 namespace lexer_types {
@@ -16,9 +17,10 @@ struct Token {
     std::string token_value;
 };
 
-const std::unordered_map<std::string, TOKEN_TYPE> lexer_table = {{"SELECT", CLAUSE}, {"FROM", CLAUSE}, {"WHERE", CLAUSE}, {",", OPERATOR},
-                                                                 {"*", OPERATOR},    {"=", OPERATOR},  {"<", OPERATOR},   {">", OPERATOR},
-                                                                 {">=", OPERATOR},   {"<=", OPERATOR}, {";", OPERATOR}};
+const std::unordered_map<std::string, TOKEN_TYPE> lexer_table = {
+        {"SELECT", CLAUSE}, {"INSERT", CLAUSE}, {"INTO", CLAUSE}, {"VALUES", CLAUSE}, {"FROM", CLAUSE}, {"WHERE", CLAUSE},
+        {",", OPERATOR},    {"*", OPERATOR},    {"=", OPERATOR},  {"<", OPERATOR},    {">", OPERATOR},  {">=", OPERATOR},
+        {"<=", OPERATOR},   {";", OPERATOR},    {")", OPERATOR},  {"(", OPERATOR}};
 } // namespace lexer_types
 
 namespace parser_types {
@@ -31,11 +33,18 @@ struct Predicate {
     std::string value = "";
 };
 
-struct AST {
+struct SELECT_AST {
     std::vector<std::string> cols_name;
     std::string table_name;
     Predicate predicate;
 };
+struct INSERT_AST {
+    std::vector<std::string> cols_name;
+    std::string table_name;
+    std::vector<int> values;
+};
+
+using ASTResult = std::variant<parser_types::SELECT_AST, parser_types::INSERT_AST>;
 
 const std::unordered_map<std::string, COLUMN_TYPE> columns = {{"x", INTEGER}};
 const std::unordered_set<std::string> table = {"test"};

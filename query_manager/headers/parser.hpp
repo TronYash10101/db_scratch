@@ -19,8 +19,19 @@ class token_iterator {
     bool has_next();
 };
 
-std::vector<std::string> parse_select_clause(parser::token_iterator &tok_it);
-parser_types::AST grammer_check(parser::token_iterator &tok_it);
+class Parser {
+  private:
+    std::string parse_from_clause(parser::token_iterator &tok_it);
+    parser_types::Predicate parse_where_clause(parser::token_iterator &tok_it);
+    void parse_into_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast);
+    void parse_value_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast);
+    parser_types::INSERT_AST parse_insert_clause(parser::token_iterator &tok_it);
+    parser_types::SELECT_AST parse_select_clause(parser::token_iterator &tok_it);
+
+  public:
+    parser_types::ASTResult grammer_check(parser::token_iterator &tok_it);
+};
+
 } // namespace parser
 
 #endif

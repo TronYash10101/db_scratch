@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+/* Token Iterator Definitions */
+
 parser::token_iterator::token_iterator(const std::string &query) : curr_idx(0) { tokens = lexer::lexer(query); };
 
 lexer_types::Token parser::token_iterator::get_next() {
@@ -39,42 +41,17 @@ lexer_types::Token parser::token_iterator::peek(int idx) {
     throw std::runtime_error("COULD NOT PEEK, INVALID INDEX");
 }
 
-std::vector<std::string> parser::parse_select_clause(parser::token_iterator &tok_it) {
-    std::vector<std::string> returned_columns;
-    lexer_types::Token sub_tok = tok_it.get_next();
+/* Parser Definitions */
 
-    while (1) {
-
-        if (sub_tok.token_value == "," && sub_tok.token_type == lexer_types::OPERATOR) {
-            lexer_types::Token next = tok_it.get_next();
-            if (next.token_type != lexer_types::IDENT && !(next.token_value == "*" && next.token_type == lexer_types::OPERATOR)) {
-                throw std::runtime_error("EXPECTED IDENTIFIER AFTER ',' but found " + next.token_value);
-            }
-            sub_tok = next;
-            continue;
-        } else if (sub_tok.token_value == "*") {
-            for (auto const &[key, value] : parser_types::columns) {
-                returned_columns.push_back(key);
-            }
-            return returned_columns;
-        } else if (parser_types::columns.find(sub_tok.token_value) == parser_types::columns.end()) {
-            throw std::runtime_error("NO SUCH COLUMN PRESENT");
-        }
-
-        if (sub_tok.token_type == lexer_types::IDENT) {
-            returned_columns.push_back(sub_tok.token_value);
-        } else {
-            throw std::runtime_error("EXPECTED IDENTIFIER AFTER" + tok_it.get_prev().token_value);
-        }
-        if (tok_it.peek(1).token_type != lexer_types::IDENT || tok_it.peek(1).token_type != lexer_types::OPERATOR) {
-            break;
-        }
-        sub_tok = tok_it.get_next();
+std::string parser::Parser::parse_from_clause(parser::token_iterator &tok_it) {
+    lexer_types::Token sub_token = tok_it.get_next();
+    if (parser_types::table.find(sub_token.token_value) != parser_types::table.end()) {
+        return sub_token.token_value;
     }
-    return returned_columns;
+    throw std::runtime_error("NO SUCH TABLE EXISTS");
 }
 
-parser_types::Predicate parse_where_clause(parser::token_iterator &tok_it) {
+parser_types::Predicate parser::Parser::parse_where_clause(parser::token_iterator &tok_it) {
     parser_types::Predicate res;
 
     lexer_types::Token col = tok_it.get_next();
@@ -87,32 +64,128 @@ parser_types::Predicate parse_where_clause(parser::token_iterator &tok_it) {
 
     return res;
 }
-
-std::string parse_from_clause(parser::token_iterator &tok_it) {
-    lexer_types::Token sub_token = tok_it.get_next();
-    if (parser_types::table.find(sub_token.token_value) != parser_types::table.end()) {
-        return sub_token.token_value;
-    }
-    throw std::runtime_error("NO SUCH TABLE EXISTS");
-}
-
-parser_types::AST parser::grammer_check(parser::token_iterator &tok_it) {
-    parser_types::AST res_ast;
+parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_iterator &tok_it) {
+    std::vector<std::string> returned_columns;
+    parser_types::SELECT_AST ast;
 
     while (tok_it.has_next()) {
-        lexer_types::Token tok = tok_it.get_next();
+        lexer_types::Token sub_tok = tok_it.get_next();
+        if (sub_tok.token_value == "FROM") {
+            ast.table_name = parse_from_clause(tok_it);
+            continue;
+        } else if (sub_tok.token_value == "WHERE") {
+            ast.predicate = parse_where_clause(tok_it);
+            continue;
+        } else {
+            while (1) {
 
-        if (tok.token_value == "SELECT") {
-            res_ast.cols_name = parse_select_clause(tok_it);
-        }
+                if (sub_tok.token_value == "," && sub_tok.token_type == lexer_types::OPERATOR) {
+                    lexer_types::Token next = tok_it.get_next();
+                    if (next.token_type != lexer_types::IDENT && !(next.token_value == "*" && next.token_type == lexer_types::OPERATOR)) {
+                        throw std::runtime_error("EXPECTED IDENTIFIER AFTER ',' but found " + next.token_value);
+                    }
+                    sub_tok = next;
+                    continue;
+                } else if (sub_tok.token_value == "*") {
+                    for (auto const &[key, value] : parser_types::columns) {
+                        returned_columns.push_back(key);
+                    }
+                    ast.cols_name = returned_columns;
+                    break;
+                } else if (parser_types::columns.find(sub_tok.token_value) == parser_types::columns.end()) {
+                    throw std::runtime_error("NO SUCH COLUMN PRESENT");
+                }
 
-        if (tok.token_value == "FROM") {
-            res_ast.table_name = parse_from_clause(tok_it);
-        }
-
-        if (tok.token_value == "WHERE") {
-            res_ast.predicate = parse_where_clause(tok_it);
+                if (sub_tok.token_type == lexer_types::IDENT) {
+                    returned_columns.push_back(sub_tok.token_value);
+                } else {
+                    throw std::runtime_error("EXPECTED IDENTIFIER AFTER" + tok_it.get_prev().token_value);
+                }
+                if (tok_it.peek(1).token_type != lexer_types::IDENT || tok_it.peek(1).token_type != lexer_types::OPERATOR) {
+                    break;
+                }
+                sub_tok = tok_it.get_next();
+            }
+            ast.cols_name = returned_columns;
         }
     }
-    return res_ast;
+    return ast;
+}
+
+void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast) {
+    lexer_types::Token sub_tok = tok_it.get_next();
+
+    // Support columns
+
+    if (sub_tok.token_type == lexer_types::IDENT) {
+        auto table_match = parser_types::table.find(sub_tok.token_value);
+        if (table_match != parser_types::table.end()) {
+            ast.table_name = sub_tok.token_value;
+        } else {
+            throw std::runtime_error("NO SUCH TABLE FOUND");
+        }
+    } else {
+        throw std::runtime_error("EXPECTED A TABLE NAME");
+    }
+
+    sub_tok = tok_it.get_next();
+
+    if (sub_tok.token_value == "(" && sub_tok.token_type == lexer_types::OPERATOR) {
+        sub_tok = tok_it.get_next();
+        while (sub_tok.token_value != ")") {
+            if (sub_tok.token_type == lexer_types::IDENT) {
+                ast.cols_name.push_back(sub_tok.token_value);
+            }
+            sub_tok = tok_it.get_next();
+        }
+    }
+}
+
+void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast) {
+    lexer_types::Token sub_tok = tok_it.get_next();
+    if (sub_tok.token_value == "(") {
+        sub_tok = tok_it.get_next();
+        while (sub_tok.token_value != ")") {
+            if (sub_tok.token_type == lexer_types::IDENT) {
+                ast.values.push_back(sub_tok.token_type);
+            }
+            sub_tok = tok_it.get_next();
+        }
+    } else {
+        throw std::runtime_error("EXPECTED ( FOR VALUE");
+    }
+}
+
+parser_types::INSERT_AST parser::Parser::parse_insert_clause(parser::token_iterator &tok_it) {
+    parser_types::INSERT_AST ast;
+    while (tok_it.has_next()) {
+        lexer_types::Token sub_tok = tok_it.get_next();
+
+        if (sub_tok.token_value == "INTO" && sub_tok.token_type == lexer_types::CLAUSE) {
+            parse_into_clause(tok_it, ast);
+        } else {
+            throw std::runtime_error("EXPECTED INTO KEYWORD AFTER INSERT");
+        }
+
+        if (sub_tok.token_value == "VALUES" && sub_tok.token_type == lexer_types::CLAUSE) {
+            parse_value_clause(tok_it, ast);
+        } else {
+            throw std::runtime_error("EXPECTED VALUES KEYWORD AFTER INTO");
+        }
+    }
+    return ast;
+}
+
+parser_types::ASTResult parser::Parser::grammer_check(parser::token_iterator &tok_it) {
+
+    lexer_types::Token first_tok = tok_it.get_next();
+
+    if (first_tok.token_value == "SELECT") {
+        return parse_select_clause(tok_it);
+    }
+    if (first_tok.token_value == "INSERT") {
+        return parse_insert_clause(tok_it);
+    }
+
+    throw std::runtime_error("COULD NOT CHECK GRAMMER");
 }

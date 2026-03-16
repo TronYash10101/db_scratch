@@ -45,7 +45,7 @@ int main() {
         expect_token(toks.back(), lexer_types::OPERATOR, ";");
     } */
     {
-        std::string query = "SELECT name FROM test WHERE x >= 10";
+        std::string query = "INSERT INTO Customers (CustomerName, ContactName, Country) VALUES ('Cardinal', 'Tom B. Erichsen', 'Norway')";
         std::vector<lexer_types::Token> toks = lexer::lexer(query);
         for (const lexer_types::Token &tok : toks) {
             std::cout << tok.token_value;

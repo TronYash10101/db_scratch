@@ -4,7 +4,8 @@
 
 bool lexer::check_seperator(std::string seperator) {
     // add more later
-    if (seperator == "," || seperator == ">" || seperator == "=" || seperator == "<" || seperator == "*" || seperator == ";") {
+    if (seperator == "," || seperator == ">" || seperator == "=" || seperator == "<" || seperator == "*" || seperator == ";" ||
+        seperator == "(" || seperator == ")") {
         return true;
     } else {
         return false;
