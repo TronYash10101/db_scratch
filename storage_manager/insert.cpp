@@ -1,7 +1,4 @@
 #include "headers/insert.hpp"
-#include "headers/heap_writer.hpp"
-#include "headers/index_writer.hpp"
-#include "headers/types.hpp"
 #include <iostream>
 
 heap_page_types::page_id insert::create_entry(buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,

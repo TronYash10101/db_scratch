@@ -12,9 +12,11 @@ class token_iterator {
 
   public:
     token_iterator(const std::string &query);
+    /* Increaments internal index maintained for tokens, and return a token */
     lexer_types::Token get_next();
     /* idx : How many positions to peek in tokens relative to curr_idx*/
     lexer_types::Token peek(int idx);
+    /* Does not Decreament internal index maintained for tokens, and return a token */
     lexer_types::Token get_prev();
     bool has_next();
 };

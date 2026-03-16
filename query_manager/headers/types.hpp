@@ -1,6 +1,7 @@
 #ifndef QUERY_TYPES
 #define QUERY_TYPES
 
+#include "../../storage_manager/headers/types.hpp"
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
@@ -41,12 +42,12 @@ struct SELECT_AST {
 struct INSERT_AST {
     std::vector<std::string> cols_name;
     std::string table_name;
-    std::vector<int> values;
+    std::vector<access_methods_types::row_t> values;
 };
 
 using ASTResult = std::variant<parser_types::SELECT_AST, parser_types::INSERT_AST>;
 
-const std::unordered_map<std::string, COLUMN_TYPE> columns = {{"x", INTEGER}};
+const std::unordered_map<std::string, COLUMN_TYPE> columns = {{"x", INTEGER}, {"y", INTEGER}};
 const std::unordered_set<std::string> table = {"test"};
 
 } // namespace parser_types

@@ -10,7 +10,6 @@
 parser::token_iterator::token_iterator(const std::string &query) : curr_idx(0) { tokens = lexer::lexer(query); };
 
 lexer_types::Token parser::token_iterator::get_next() {
-    /* Increaments internal index maintained for tokens, and return a token */
     if (curr_idx < tokens.size()) {
         return tokens[curr_idx++];
     } else {
@@ -19,7 +18,6 @@ lexer_types::Token parser::token_iterator::get_next() {
 }
 lexer_types::Token parser::token_iterator::get_prev() {
 
-    /* Does not Decreament internal index maintained for tokens, and return a token */
     if (curr_idx > 0) {
         return tokens[curr_idx - 1];
     } else {
@@ -134,7 +132,12 @@ void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_ty
         sub_tok = tok_it.get_next();
         while (sub_tok.token_value != ")") {
             if (sub_tok.token_type == lexer_types::IDENT) {
-                ast.cols_name.push_back(sub_tok.token_value);
+                auto find = parser_types::columns.find(sub_tok.token_value);
+                if (find != parser_types::columns.end()) {
+                    ast.cols_name.push_back(sub_tok.token_value);
+                } else {
+                    throw std::runtime_error("NO SUCH COULMNS");
+                }
             }
             sub_tok = tok_it.get_next();
         }
@@ -144,16 +147,20 @@ void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_ty
 void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast) {
     lexer_types::Token sub_tok = tok_it.get_next();
     if (sub_tok.token_value == "(") {
-        sub_tok = tok_it.get_next();
+        std::vector<int> temp;
         while (sub_tok.token_value != ")") {
-            if (sub_tok.token_type == lexer_types::IDENT) {
-                ast.values.push_back(sub_tok.token_type);
-            }
             sub_tok = tok_it.get_next();
+            if (sub_tok.token_type == lexer_types::IDENT) {
+                temp.push_back(std::stoi(sub_tok.token_value));
+            }
         }
-    } else {
-        throw std::runtime_error("EXPECTED ( FOR VALUE");
+        // follows default schema order when not provided and now, but should also work for some order
+        ast.values.push_back({temp[0], temp[1]});
+    } else if (tok_it.get_prev().token_value == "(") {
+        throw std::runtime_error("EXPECTED ( AFTER VALUES");
     }
+    if (tok_it.has_next())
+        parse_value_clause(tok_it, ast);
 }
 
 parser_types::INSERT_AST parser::Parser::parse_insert_clause(parser::token_iterator &tok_it) {
@@ -163,13 +170,15 @@ parser_types::INSERT_AST parser::Parser::parse_insert_clause(parser::token_itera
 
         if (sub_tok.token_value == "INTO" && sub_tok.token_type == lexer_types::CLAUSE) {
             parse_into_clause(tok_it, ast);
-        } else {
+            continue;
+        } else if (tok_it.get_prev().token_value == "INSERT") {
             throw std::runtime_error("EXPECTED INTO KEYWORD AFTER INSERT");
         }
 
         if (sub_tok.token_value == "VALUES" && sub_tok.token_type == lexer_types::CLAUSE) {
             parse_value_clause(tok_it, ast);
-        } else {
+            continue;
+        } else if (tok_it.get_prev().token_value == ast.table_name) {
             throw std::runtime_error("EXPECTED VALUES KEYWORD AFTER INTO");
         }
     }

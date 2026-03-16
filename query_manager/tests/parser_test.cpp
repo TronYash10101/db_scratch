@@ -36,7 +36,7 @@ int main() {
         assert(threw && "Expected parser to throw on trailing comma without identifier");
     } */
 
-    {
+    /* {
         parser::token_iterator it("SELECT x FROM test WHERE x >= 10");
         parser::Parser Parser;
         parser_types::ASTResult res = Parser.grammer_check(it);
@@ -53,23 +53,26 @@ int main() {
             std::cout << "Predicate: ";
             std::cout << select->predicate.col << select->predicate.op << select->predicate.value << "\n";
         }
-    }
+    } */
     {
         parser::token_iterator it("INSERT INTO test VALUES (1,2)");
         parser::Parser Parser;
         parser_types::ASTResult res = Parser.grammer_check(it);
-        if (auto select = std::get_if<parser_types::SELECT_AST>(&res)) {
+        if (auto inesrt = std::get_if<parser_types::INSERT_AST>(&res)) {
             std::cout << "Col names:\n ";
-            for (const std::string &ele : select->cols_name) {
+            for (const std::string &ele : inesrt->cols_name) {
                 std::cout << ele << " ";
             }
             std::cout << "\n";
 
             std::cout << "Table: ";
-            std::cout << select->table_name << "\n";
+            std::cout << inesrt->table_name << "\n";
 
-            std::cout << "Predicate: ";
-            std::cout << select->predicate.col << select->predicate.op << select->predicate.value << "\n";
+            std::cout << "values:\n ";
+            for (const access_methods_types::row_t &ele : inesrt->values) {
+                std::cout << "(" << ele.x << ", " << ele.y << ")" << " ";
+            }
+            std::cout << "\n";
         }
     }
 

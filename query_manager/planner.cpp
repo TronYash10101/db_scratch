@@ -1,16 +1,18 @@
 #include "headers/planner.hpp"
+#include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 std::vector<access_methods_types::row_t> planner::select_plan(std::vector<std::unique_ptr<Operator>> &operators,
                                                               buffer_manager::buffer_pool &buff_pool,
-                                                              access_methods::Access_methods &access_manager,
+                                                              access_methods::Access_methods &access_methods,
                                                               parser_types::SELECT_AST &ast) {
 
     std::vector<access_methods_types::row_t> matched_rows;
     operators.reserve(3);
 
-    auto seq_scan = std::make_unique<Seq_scan>(access_manager, buff_pool);
+    auto seq_scan = std::make_unique<Seq_scan>(access_methods, buff_pool);
     seq_scan->init();
     auto filter = std::make_unique<Filter>(*seq_scan, ast.predicate);
     filter->init();
@@ -30,4 +32,21 @@ std::vector<access_methods_types::row_t> planner::select_plan(std::vector<std::u
     return matched_rows;
 }
 
-void planner::insert() {}
+std::vector<access_methods_types::row_t> planner::insert_plan(std::vector<std::unique_ptr<Operator>> &operators,
+                                                              buffer_manager::buffer_pool &buff_pool,
+                                                              access_methods::Access_methods &access_methods, parser_types::INSERT_AST &ast,
+                                                              index_write::root_struct &curr_root) {
+
+    operators.reserve(1);
+    std::vector<access_methods_types::row_t> inserted_rows;
+    auto insert = std::make_unique<Insert>(nullptr, ast, access_methods, buff_pool, curr_root);
+
+    operators.push_back(std::move(insert));
+    std::optional<access_methods_types::row_t> inserted_row = operators.back()->next();
+    while (inserted_row.has_value()) {
+        inserted_rows.push_back(inserted_row.value());
+        inserted_row = operators.back()->next();
+    }
+
+    return inserted_rows;
+}

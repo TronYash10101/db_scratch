@@ -2,10 +2,16 @@
 #define PLANNER
 
 #include "../../storage_manager/headers/access_methods.hpp"
+#include "../../storage_manager/headers/insert.hpp"
 #include "../../storage_manager/headers/types.hpp"
+#include "lexer.hpp"
 #include "types.hpp"
+#include <atomic>
+#include <cstring>
 #include <iostream>
 #include <optional>
+#include <string>
+#include <type_traits>
 #include <vector>
 
 namespace planner {
@@ -119,11 +125,41 @@ class Projection : public Operator {
     void close() override {}
 };
 
+class Insert : public Operator {
+  private:
+    Operator *next_op;
+    parser_types::INSERT_AST &ast;
+    access_methods::Access_methods &am;
+    buffer_manager::buffer_pool &buff_pool;
+    index_write::root_struct &curr_root;
+    std::atomic<int> curr_row = 0;
+
+  public:
+    Insert(Operator *next_op, parser_types::INSERT_AST &ast, access_methods::Access_methods &am, buffer_manager::buffer_pool &buff_pool,
+           index_write::root_struct &curr_root)
+        : next_op(next_op), ast(ast), am(am), buff_pool(buff_pool), curr_root(curr_root){};
+
+    void init() override {}
+
+    std::optional<access_methods_types::row_t> next() override {
+        access_methods_types::row_t inserted_row;
+        if (curr_row < ast.values.size()) {
+            curr_root.root_pid = insert::create_entry(buff_pool, am, ast.values[curr_row], curr_root);
+            curr_row++;
+            return inserted_row;
+        }
+        return std::nullopt;
+    }
+    void close() override {}
+};
+
 std::vector<access_methods_types::row_t> select_plan(std::vector<std::unique_ptr<Operator>> &operators,
-                                                     buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_manager,
+                                                     buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,
                                                      parser_types::SELECT_AST &ast);
 
-void insert();
+std::vector<access_methods_types::row_t> insert_plan(std::vector<std::unique_ptr<Operator>> &operators,
+                                                     buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,
+                                                     parser_types::INSERT_AST &ast, index_write::root_struct &curr_root);
 
 }; // namespace planner
 

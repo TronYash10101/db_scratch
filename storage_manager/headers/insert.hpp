@@ -3,6 +3,7 @@
 
 #include "heap_writer.hpp"
 #include "index_writer.hpp"
+#include "types.hpp"
 
 namespace insert {
 heap_page_types::page_id create_entry(buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,

@@ -33,7 +33,14 @@ void lexer::whitespace_split(const std::string &input, std::vector<lexer_types::
                 result_arr.push_back({lexer_types::OPERATOR, curr_word});
                 curr_word.clear();
                 i--;
+            } else {
+                for (const char &op : curr_word) {
+                    result_arr.push_back({lexer_types::OPERATOR, std::string(1, op)});
+                }
+                curr_word.clear();
+                i--;
             }
+
             continue;
         } else if (input[i] == ' ' && !curr_word.empty()) {
             auto it = lexer_types::lexer_table.find(curr_word);
