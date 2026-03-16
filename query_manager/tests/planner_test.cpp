@@ -25,18 +25,8 @@ int main() {
     access_methods_types::row_t temp_row3 = {6, 1};
     access_methods_types::row_t temp_row4 = {2, 2};
 
-    /* {
-        std::string query = "SELECT x FROM test WHERE x >= 1";
-        parser::token_iterator tok_it(query);
-        std::vector<std::unique_ptr<planner::Operator>> operators;
-        parser::Parser Parser;
-
-        index_write::root_struct curr_root;
-        curr_root.root_pid = buffer_manager_types::INVALID_PAGE_ID;
-    } */
-
     {
-        std::string insert_query = "INSERT INTO test VALUES (1,2)";
+        std::string insert_query = "INSERT INTO test VALUES (2,2) (1,2)";
         std::string select_query = "SELECT x FROM test WHERE x >= 1";
 
         parser::token_iterator select_tok_it(select_query);
@@ -56,10 +46,6 @@ int main() {
         if (auto insert_ast = std::get_if<parser_types::INSERT_AST>(&insert_res_ast)) {
             std::vector<access_methods_types::row_t> k =
                     planner::insert_plan(insert_operators, buff_pool, access_methods, *insert_ast, curr_root);
-
-            for (const access_methods_types::row_t &row : k) {
-                std::cout << "Inserted row x: " << row.x << "   ";
-            }
         }
 
         if (auto select_ast = std::get_if<parser_types::SELECT_AST>(&select_res_ast)) {

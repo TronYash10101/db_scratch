@@ -15,7 +15,7 @@ class token_iterator {
     /* Increaments internal index maintained for tokens, and return a token */
     lexer_types::Token get_next();
     /* idx : How many positions to peek in tokens relative to curr_idx*/
-    lexer_types::Token peek(int idx);
+    lexer_types::Token peek(int idx) const;
     /* Does not Decreament internal index maintained for tokens, and return a token */
     lexer_types::Token get_prev();
     bool has_next();

@@ -55,7 +55,7 @@ int main() {
         }
     } */
     {
-        parser::token_iterator it("INSERT INTO test VALUES (1,2)");
+        parser::token_iterator it("INSERT INTO test (x,y) VALUES (1,2),(4,5)");
         parser::Parser Parser;
         parser_types::ASTResult res = Parser.grammer_check(it);
         if (auto inesrt = std::get_if<parser_types::INSERT_AST>(&res)) {

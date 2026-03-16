@@ -1,6 +1,7 @@
 #include "headers/parser.hpp"
 #include "headers/lexer.hpp"
 #include "headers/types.hpp"
+#include <cstdlib>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -32,10 +33,14 @@ bool parser::token_iterator::has_next() {
     return false;
 }
 
-lexer_types::Token parser::token_iterator::peek(int idx) {
-    if (idx < tokens.size() && idx >= 0) {
-        return tokens[curr_idx + idx];
+lexer_types::Token parser::token_iterator::peek(int idx) const {
+
+    int pos = curr_idx + idx - 1;
+
+    if (pos >= 0 && pos < tokens.size()) {
+        return tokens[pos];
     }
+
     throw std::runtime_error("COULD NOT PEEK, INVALID INDEX");
 }
 
@@ -112,7 +117,6 @@ parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_itera
 
 void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast) {
     lexer_types::Token sub_tok = tok_it.get_next();
-
     // Support columns
 
     if (sub_tok.token_type == lexer_types::IDENT) {
@@ -126,9 +130,9 @@ void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_ty
         throw std::runtime_error("EXPECTED A TABLE NAME");
     }
 
-    sub_tok = tok_it.get_next();
+    lexer_types::Token next_tok = tok_it.peek(1);
 
-    if (sub_tok.token_value == "(" && sub_tok.token_type == lexer_types::OPERATOR) {
+    if (next_tok.token_value == "(" && next_tok.token_type == lexer_types::OPERATOR) {
         sub_tok = tok_it.get_next();
         while (sub_tok.token_value != ")") {
             if (sub_tok.token_type == lexer_types::IDENT) {
