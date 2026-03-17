@@ -39,13 +39,17 @@ struct SELECT_AST {
     std::string table_name;
     Predicate predicate;
 };
+
 struct INSERT_AST {
     std::vector<std::string> cols_name;
     std::string table_name;
     std::vector<access_methods_types::row_t> values;
 };
+struct SCHEMA_AST {
+    std::string schmea_name;
+};
 
-using ASTResult = std::variant<parser_types::SELECT_AST, parser_types::INSERT_AST>;
+using ASTResult = std::variant<SELECT_AST, INSERT_AST, SCHEMA_AST>;
 
 const std::unordered_map<std::string, COLUMN_TYPE> columns = {{"x", INTEGER}, {"y", INTEGER}};
 const std::unordered_set<std::string> table = {"test"};
