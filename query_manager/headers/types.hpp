@@ -49,7 +49,22 @@ struct SCHEMA_AST {
     std::string schmea_name;
 };
 
-using ASTResult = std::variant<SELECT_AST, INSERT_AST, SCHEMA_AST>;
+struct ALTER_TABLE_AST {
+    std::string table_name;
+    std::string column_name;
+    COLUMN_TYPE column_type;
+};
+
+struct CREATE_TABLE_AST {
+    std::string table_name;
+    struct column_attr {
+        std::string column_name;
+        COLUMN_TYPE column_type;
+    };
+    std::vector<column_attr> columns;
+};
+
+using ASTResult = std::variant<SELECT_AST, INSERT_AST, SCHEMA_AST, CREATE_TABLE_AST, ALTER_TABLE_AST>;
 
 const std::unordered_map<std::string, COLUMN_TYPE> columns = {{"x", INTEGER}, {"y", INTEGER}};
 const std::unordered_set<std::string> table = {"test"};
