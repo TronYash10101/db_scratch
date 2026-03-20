@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <filesystem>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -16,18 +17,15 @@ namespace schema {
 
 #pragma pack(push, 1)
 struct col_attrs {
-    size_t column_name_size;
     std::string column_name;
-    parser_types::COLUMN_TYPE type;
+    parser_types::COLUMN_TYPE column_type;
 };
 #pragma pack(pop)
 
 #pragma pack(push, 1)
 struct tables_attrs {
-    size_t columns_size;
-    size_t heap_page_offset;
-    heap_page_types::page_id page_id;
-    size_t table_name_size;
+    size_t heap_page_offset = 0;
+    heap_page_types::page_id page_id = 0;
     std::string table_name;
     std::vector<col_attrs> columns;
 };
@@ -35,9 +33,7 @@ struct tables_attrs {
 
 #pragma pack(push, 1)
 struct schema_attr {
-    size_t schema_name_size;
     std::string schema_name;
-    size_t tables_size;
     std::vector<tables_attrs> tables;
 };
 #pragma pack(pop)
@@ -49,36 +45,58 @@ class schema_manager {
     size_t schema_file_size;
     std::vector<schema_attr> schema_catalog;
 
-    std::optional<schema_attr> schema_find(const std::string schema_name) const {
-        for (const schema_attr &schema : schema_catalog) {
-            if (schema.schema_name == schema_name) {
-                return schema;
+    std::optional<int> schema_find(const std::string schema_name) const {
+        for (int i = 0; i < schema_catalog.size(); i++) {
+            if (schema_catalog[i].schema_name == schema_name) {
+                return i;
             }
         }
+
         return std::nullopt;
     };
 
   public:
     schema_manager(const std::filesystem::path &schmea_table_path) : schmea_table_path(schmea_table_path) {
         if (!std::filesystem::exists(schmea_table_path)) {
-            schmea_file = fopen(schmea_table_path.c_str(), "w+b");
+            schmea_file = fopen(schmea_table_path.c_str(), "rb+");
         } else {
-            schmea_file = fopen(schmea_table_path.c_str(), "r+b");
+            schmea_file = fopen(schmea_table_path.c_str(), "wb+");
         }
         fseek(schmea_file, 0, SEEK_END);
         schema_file_size = ftell(schmea_file);
         fseek(schmea_file, 0, SEEK_SET);
+
+        deserialize();
     };
 
     void deserialize();
     void serialize();
-    void create_schema(std::vector<schema_attr> schmea_catalog, schema::schema_attr &schema, parser_types::SCHEMA_AST &ast);
+    void create_schema(parser_types::SCHEMA_AST &ast);
 
-    void schema_create_table(std::vector<schema_attr> schmea_catalog, schema_attr &curr_schema, parser_types::CREATE_TABLE_AST &ast);
+    void schema_create_table(const std::string &schema_name, parser_types::CREATE_TABLE_AST &ast);
+    void iterate_catalog() const {
+        for (const schema_attr &ele : schema_catalog) {
+            std::cout << "Schema name: ";
+            std::cout << ele.schema_name;
+            std::cout << "Table name: ";
+            for (const tables_attrs &table : ele.tables) {
+                std::cout << table.table_name;
+                std::cout << "\n";
+                for (const col_attrs &col : table.columns) {
+                    std::cout << col.column_name;
+                    std::cout << "\n";
+                }
+            }
+            std::cout << "\n";
+        }
+    }
 
     ~schema_manager() {
         // write schema here, before closing file
+        serialize();
+        std::cout << "SCHEMA FILE WRITTEN";
         fclose(schmea_file);
+        fflush(schmea_file);
     }
 };
 

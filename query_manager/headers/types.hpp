@@ -56,11 +56,15 @@ struct ALTER_TABLE_AST {
 };
 
 struct CREATE_TABLE_AST {
-    std::string table_name;
+  private:
     struct column_attr {
         std::string column_name;
         COLUMN_TYPE column_type;
     };
+
+  public:
+    std::string table_name;
+
     std::vector<column_attr> columns;
 };
 
