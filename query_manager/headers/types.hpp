@@ -27,6 +27,7 @@ const std::unordered_map<std::string, TOKEN_TYPE> lexer_table = {
 namespace parser_types {
 
 enum COLUMN_TYPE { STRING, INTEGER, FLOATING };
+using VALUE_TYPE = std::variant<std::string, int, float>;
 
 struct Predicate {
     std::string col = "";
@@ -40,11 +41,16 @@ struct SELECT_AST {
     Predicate predicate;
 };
 
+struct Row {
+    std::vector<VALUE_TYPE> row;
+};
 struct INSERT_AST {
+
     std::vector<std::string> cols_name;
     std::string table_name;
-    std::vector<access_methods_types::row_t> values;
+    std::vector<Row> values;
 };
+
 struct SCHEMA_AST {
     std::string schmea_name;
 };
@@ -70,8 +76,8 @@ struct CREATE_TABLE_AST {
 
 using ASTResult = std::variant<SELECT_AST, INSERT_AST, SCHEMA_AST, CREATE_TABLE_AST, ALTER_TABLE_AST>;
 
-const std::unordered_map<std::string, COLUMN_TYPE> columns = {{"x", INTEGER}, {"y", INTEGER}};
-const std::unordered_set<std::string> table = {"test"};
+// const std::unordered_map<std::string, COLUMN_TYPE> columns = {{"x", INTEGER}, {"y", INTEGER}};
+// const std::unordered_set<std::string> table = {"test"};
 
 } // namespace parser_types
 

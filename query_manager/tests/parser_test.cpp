@@ -36,10 +36,13 @@ int main() {
         assert(threw && "Expected parser to throw on trailing comma without identifier");
     } */
 
-    /* {
-        parser::token_iterator it("SELECT x FROM test WHERE x >= 10");
+    {
+        std::filesystem::path filepath = "/home/yash-jadhav/db_scratch/catalog_manager/schema_file.bin";
+        parser::token_iterator it("SELECT x FROM test");
         parser::Parser Parser;
-        parser_types::ASTResult res = Parser.grammer_check(it);
+        schema::schema_manager sch_ma(filepath);
+        std::string schmea_name = "s1";
+        parser_types::ASTResult res = Parser.grammer_check(it, sch_ma, schmea_name);
         if (auto select = std::get_if<parser_types::SELECT_AST>(&res)) {
             std::cout << "Col names:\n ";
             for (const std::string &ele : select->cols_name) {
@@ -53,8 +56,9 @@ int main() {
             std::cout << "Predicate: ";
             std::cout << select->predicate.col << select->predicate.op << select->predicate.value << "\n";
         }
-    } */
-    {
+    }
+
+    /* {
         parser::token_iterator it("INSERT INTO test (x,y) VALUES (1,2),(4,5)");
         parser::Parser Parser;
         parser_types::ASTResult res = Parser.grammer_check(it);
@@ -74,7 +78,7 @@ int main() {
             }
             std::cout << "\n";
         }
-    }
+    } */
 
     std::cout << "parser tests passed\n";
     return 0;

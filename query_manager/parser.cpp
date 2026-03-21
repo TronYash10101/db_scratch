@@ -2,8 +2,11 @@
 #include "headers/lexer.hpp"
 #include "headers/types.hpp"
 #include <cstdlib>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <variant>
 #include <vector>
 
 /* Token Iterator Definitions */
@@ -46,9 +49,13 @@ lexer_types::Token parser::token_iterator::peek(int idx) const {
 
 /* Parser Definitions */
 
-std::string parser::Parser::parse_from_clause(parser::token_iterator &tok_it) {
+std::string parser::Parser::parse_from_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
+                                              std::string &schema_name) {
     lexer_types::Token sub_token = tok_it.get_next();
-    if (parser_types::table.find(sub_token.token_value) != parser_types::table.end()) {
+    std::optional<std::vector<schema::ENTITY_TYPE>> table_find =
+            schema_manager.entity_find(schema::TABLE, sub_token.token_value, &schema_name);
+
+    if (table_find.has_value()) {
         return sub_token.token_value;
     }
     throw std::runtime_error("NO SUCH TABLE EXISTS");
@@ -67,14 +74,15 @@ parser_types::Predicate parser::Parser::parse_where_clause(parser::token_iterato
 
     return res;
 }
-parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_iterator &tok_it) {
+parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
+                                                             std::string &schema_name) {
     std::vector<std::string> returned_columns;
     parser_types::SELECT_AST ast;
 
     while (tok_it.has_next()) {
         lexer_types::Token sub_tok = tok_it.get_next();
         if (sub_tok.token_value == "FROM") {
-            ast.table_name = parse_from_clause(tok_it);
+            ast.table_name = parse_from_clause(tok_it, schema_manager, schema_name);
             continue;
         } else if (sub_tok.token_value == "WHERE") {
             ast.predicate = parse_where_clause(tok_it);
@@ -90,20 +98,35 @@ parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_itera
                     sub_tok = next;
                     continue;
                 } else if (sub_tok.token_value == "*") {
-                    for (auto const &[key, value] : parser_types::columns) {
-                        returned_columns.push_back(key);
+                    // table name not available
+                    std::optional<std::vector<schema::ENTITY_TYPE>> columns =
+                            schema_manager.entity_find(schema::COLUMN, sub_tok.token_value, &ast.table_name, &schema_name);
+                    if (columns.has_value()) {
+                        for (const schema::ENTITY_TYPE &ele : columns.value()) {
+                            if (auto *ptr = std::get_if<schema::col_attrs>(&ele)) {
+                                returned_columns.push_back(ptr->column_name);
+                            }
+                        }
                     }
                     ast.cols_name = returned_columns;
                     break;
-                } else if (parser_types::columns.find(sub_tok.token_value) == parser_types::columns.end()) {
-                    throw std::runtime_error("NO SUCH COLUMN PRESENT");
                 }
 
                 if (sub_tok.token_type == lexer_types::IDENT) {
-                    returned_columns.push_back(sub_tok.token_value);
+                    std::optional<std::vector<schema::ENTITY_TYPE>> column =
+                            schema_manager.entity_find(schema::COLUMN, sub_tok.token_value, &ast.table_name, &schema_name);
+                    if (column.has_value()) {
+                        if (auto *found_col = std::get_if<schema::col_attrs>(&column.value()[0])) {
+                            returned_columns.push_back(found_col->column_name);
+                        }
+                    } else {
+                        throw std::runtime_error("NO SUCH COLUMN FOUND");
+                    }
+
                 } else {
                     throw std::runtime_error("EXPECTED IDENTIFIER AFTER" + tok_it.get_prev().token_value);
                 }
+
                 if (tok_it.peek(1).token_type != lexer_types::IDENT || tok_it.peek(1).token_type != lexer_types::OPERATOR) {
                     break;
                 }
@@ -115,13 +138,16 @@ parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_itera
     return ast;
 }
 
-void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast) {
+void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast,
+                                       schema::schema_manager &schema_manager, std::string &schema_name) {
     lexer_types::Token sub_tok = tok_it.get_next();
     // Support columns
 
     if (sub_tok.token_type == lexer_types::IDENT) {
-        auto table_match = parser_types::table.find(sub_tok.token_value);
-        if (table_match != parser_types::table.end()) {
+        std::optional<std::vector<schema::ENTITY_TYPE>> table_match =
+                schema_manager.entity_find(schema::TABLE, sub_tok.token_value, &schema_name);
+
+        if (table_match.has_value()) {
             ast.table_name = sub_tok.token_value;
         } else {
             throw std::runtime_error("NO SUCH TABLE FOUND");
@@ -136,8 +162,10 @@ void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_ty
         sub_tok = tok_it.get_next();
         while (sub_tok.token_value != ")") {
             if (sub_tok.token_type == lexer_types::IDENT) {
-                auto find = parser_types::columns.find(sub_tok.token_value);
-                if (find != parser_types::columns.end()) {
+                std::optional<std::vector<schema::ENTITY_TYPE>> find =
+                        schema_manager.entity_find(schema::COLUMN, sub_tok.token_value, &ast.table_name, &schema_name);
+
+                if (find.has_value()) {
                     ast.cols_name.push_back(sub_tok.token_value);
                 } else {
                     throw std::runtime_error("NO SUCH COULMNS");
@@ -148,39 +176,57 @@ void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_ty
     }
 }
 
-void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast) {
+void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast,
+                                        schema::schema_manager &schema_manager, std::string &schema_name) {
     lexer_types::Token sub_tok = tok_it.get_next();
+
     if (sub_tok.token_value == "(") {
-        std::vector<int> temp;
+        parser_types::Row this_row;
+
+        int i = 0;
         while (sub_tok.token_value != ")") {
-            sub_tok = tok_it.get_next();
             if (sub_tok.token_type == lexer_types::IDENT) {
-                temp.push_back(std::stoi(sub_tok.token_value));
+                sub_tok = tok_it.get_next();
+                std::optional<std::vector<schema::ENTITY_TYPE>> f =
+                        schema_manager.entity_find(schema::COLUMN, ast.cols_name[i], &ast.table_name, &schema_name);
+
+                if (f.has_value()) {
+                    if (auto *pt = std::get_if<schema::col_attrs>(&f.value()[0])) {
+                        if (pt->match(pt->column_type, sub_tok.token_value)) {
+                            this_row.row.push_back(sub_tok.token_value);
+                        } else {
+                            throw std::runtime_error("VALUES TYPE DOES NOT MATCH COLUMN ORDER GIVEN");
+                        }
+                    }
+                }
+                i++;
             }
         }
+        ast.values.push_back(this_row);
         // follows default schema order when not provided and now, but should also work for some order
-        ast.values.push_back({temp[0], temp[1]});
     } else if (tok_it.get_prev().token_value == "(") {
         throw std::runtime_error("EXPECTED ( AFTER VALUES");
     }
+
     if (tok_it.has_next())
-        parse_value_clause(tok_it, ast);
+        parse_value_clause(tok_it, ast, schema_manager, schema_name);
 }
 
-parser_types::INSERT_AST parser::Parser::parse_insert_clause(parser::token_iterator &tok_it) {
+parser_types::INSERT_AST parser::Parser::parse_insert_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
+                                                             std::string &schema_name) {
     parser_types::INSERT_AST ast;
     while (tok_it.has_next()) {
         lexer_types::Token sub_tok = tok_it.get_next();
 
         if (sub_tok.token_value == "INTO" && sub_tok.token_type == lexer_types::CLAUSE) {
-            parse_into_clause(tok_it, ast);
+            parse_into_clause(tok_it, ast, schema_manager, schema_name);
             continue;
         } else if (tok_it.get_prev().token_value == "INSERT") {
             throw std::runtime_error("EXPECTED INTO KEYWORD AFTER INSERT");
         }
 
         if (sub_tok.token_value == "VALUES" && sub_tok.token_type == lexer_types::CLAUSE) {
-            parse_value_clause(tok_it, ast);
+            parse_value_clause(tok_it, ast, schema_manager, schema_name);
             continue;
         } else if (tok_it.get_prev().token_value == ast.table_name) {
             throw std::runtime_error("EXPECTED VALUES KEYWORD AFTER INTO");
@@ -189,15 +235,16 @@ parser_types::INSERT_AST parser::Parser::parse_insert_clause(parser::token_itera
     return ast;
 }
 
-parser_types::ASTResult parser::Parser::grammer_check(parser::token_iterator &tok_it) {
+parser_types::ASTResult parser::Parser::grammer_check(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
+                                                      std::string &schema_name) {
 
     lexer_types::Token first_tok = tok_it.get_next();
 
     if (first_tok.token_value == "SELECT") {
-        return parse_select_clause(tok_it);
+        return parse_select_clause(tok_it, schema_manager, schema_name);
     }
     if (first_tok.token_value == "INSERT") {
-        return parse_insert_clause(tok_it);
+        return parse_insert_clause(tok_it, schema_manager, schema_name);
     }
 
     throw std::runtime_error("COULD NOT CHECK GRAMMER");

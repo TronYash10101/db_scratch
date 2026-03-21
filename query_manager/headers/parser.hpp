@@ -1,6 +1,7 @@
 #ifndef PARSER
 #define PARSER
 
+#include "../../catalog_manager/headers/schmea_manager.hpp"
 #include "types.hpp"
 
 namespace parser {
@@ -23,15 +24,19 @@ class token_iterator {
 
 class Parser {
   private:
-    std::string parse_from_clause(parser::token_iterator &tok_it);
+    std::string parse_from_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager, std::string &schema_name);
     parser_types::Predicate parse_where_clause(parser::token_iterator &tok_it);
-    void parse_into_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast);
-    void parse_value_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast);
-    parser_types::INSERT_AST parse_insert_clause(parser::token_iterator &tok_it);
-    parser_types::SELECT_AST parse_select_clause(parser::token_iterator &tok_it);
+    void parse_into_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast, schema::schema_manager &schema_manager,
+                           std::string &schema_name);
+    void parse_value_clause(parser::token_iterator &tok_it, parser_types::INSERT_AST &ast, schema::schema_manager &schema_manager,
+                            std::string &schema_name);
+    parser_types::INSERT_AST parse_insert_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
+                                                 std::string &schema_name);
+    parser_types::SELECT_AST parse_select_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
+                                                 std::string &schema_name);
 
   public:
-    parser_types::ASTResult grammer_check(parser::token_iterator &tok_it);
+    parser_types::ASTResult grammer_check(parser::token_iterator &tok_it, schema::schema_manager &schema_manager, std::string &schema_name);
 };
 
 } // namespace parser

@@ -9,7 +9,7 @@ $(BIN_DIR)/lexer_test: lexer_test.cpp ../lexer.cpp
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXX_FLAGS) $^ -o $@
 
-$(BIN_DIR)/parser_test: parser_test.cpp ../parser.cpp ../lexer.cpp
+$(BIN_DIR)/parser_test: parser_test.cpp ../parser.cpp ../lexer.cpp ../../catalog_manager/schema_manager.cpp
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXX_FLAGS) $^ -o $@
 

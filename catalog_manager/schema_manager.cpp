@@ -3,6 +3,7 @@
 #include <cwchar>
 #include <optional>
 #include <stdexcept>
+#include <variant>
 #include <vector>
 
 void schema::schema_manager::create_schema(parser_types::SCHEMA_AST &ast) {
@@ -24,9 +25,13 @@ void schema::schema_manager::schema_create_table(const std::string &schema_name,
     table_attr.table_name = ast.table_name;
     table_attr.columns = columns;
 
-    std::optional<int> matched_idx = schema_find(schema_name);
+    std::optional<std::vector<ENTITY_TYPE>> matched_idx = entity_find(SCHEMA, schema_name);
     if (matched_idx.has_value()) {
-        schema_catalog[matched_idx.value()].tables.push_back(table_attr);
+        if (auto *ptr = std::get_if<schema_attr>(&matched_idx.value()[0])) {
+            ptr->tables.push_back(table_attr);
+        } else {
+            throw std::runtime_error("ERROR INSERTING NEW TABLE");
+        }
     } else {
         throw std::runtime_error("NO SCHEMA FOUND");
     }
