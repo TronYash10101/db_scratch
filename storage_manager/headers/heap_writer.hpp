@@ -7,7 +7,7 @@
 #include <stdexcept>
 namespace heap_writer {
 
-heap_page_types::Slot heap_write(char *raw_heap_page, const access_methods_types::row_t &row);
+heap_page_types::Slot heap_write(char *raw_heap_page, const access_methods_types::row_t &row, const std::vector<size_t> &row_data_size_arr);
 void delete_slot(buffer_manager::buffer_pool &buff_pool, heap_page_types::RID rid);
 
 } // namespace heap_writer

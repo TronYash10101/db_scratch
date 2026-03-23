@@ -98,7 +98,6 @@ parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_itera
                     sub_tok = next;
                     continue;
                 } else if (sub_tok.token_value == "*") {
-                    // table name not available
                     std::optional<std::vector<schema::ENTITY_TYPE>> columns =
                             schema_manager.entity_find(schema::COLUMN, sub_tok.token_value, &ast.table_name, &schema_name);
                     if (columns.has_value()) {
@@ -181,19 +180,30 @@ void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_t
     lexer_types::Token sub_tok = tok_it.get_next();
 
     if (sub_tok.token_value == "(") {
-        parser_types::Row this_row;
+        access_methods_types::row_t this_row;
 
         int i = 0;
         while (sub_tok.token_value != ")") {
             if (sub_tok.token_type == lexer_types::IDENT) {
                 sub_tok = tok_it.get_next();
-                std::optional<std::vector<schema::ENTITY_TYPE>> f =
+
+                std::optional<std::vector<schema::ENTITY_TYPE>> ast_table =
+                        schema_manager.entity_find(schema::TABLE, ast.table_name, &schema_name);
+                std::optional<std::vector<schema::ENTITY_TYPE>> ast_col =
                         schema_manager.entity_find(schema::COLUMN, ast.cols_name[i], &ast.table_name, &schema_name);
 
-                if (f.has_value()) {
-                    if (auto *pt = std::get_if<schema::col_attrs>(&f.value()[0])) {
-                        if (pt->match(pt->column_type, sub_tok.token_value)) {
-                            this_row.row.push_back(sub_tok.token_value);
+                // some optimization look into that
+                if (ast_col.has_value() && ast_table.has_value()) {
+                    if (auto *pt = std::get_if<schema::col_attrs>(&ast_col.value()[0])) {
+                        if (pt->col_type_match(pt->column_type, sub_tok.token_value)) {
+                            if (auto *t_pt = std::get_if<schema::tables_attrs>(&ast_table.value()[0])) {
+                                this_row.row.resize(t_pt->columns.size());
+                                for (int k = 0; i < t_pt->columns.size(); i++) {
+                                    if (pt->column_name == t_pt->columns[k].column_name) {
+                                        this_row.row[k] = sub_tok.token_value;
+                                    }
+                                }
+                            }
                         } else {
                             throw std::runtime_error("VALUES TYPE DOES NOT MATCH COLUMN ORDER GIVEN");
                         }

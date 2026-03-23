@@ -6,6 +6,7 @@
 #include <cstring>
 #include <iostream>
 #include <stdint.h>
+#include <variant>
 #include <vector>
 
 // namespace diskoperator_types
@@ -130,37 +131,18 @@ struct Node {
 namespace access_methods_types {
 
 // Stored in heap page
-struct row_t {
-    // int primary_key;
-    int x = 0;
-    int y = 0;
-};
 
-typedef enum { X, Y } col_type;
 typedef enum { EQ, GT, LS, GTE, LSE } op_type;
 
-struct SARG {
-    col_type col;
-    op_type op;
-    int constant;
+using VALUE_TYPE = std::variant<std::string, int, float>;
+struct row_t {
+    std::vector<VALUE_TYPE> row;
+};
 
-    bool match(row_t &match_to_row) const {
-        int value = (col == X) ? match_to_row.x : match_to_row.y;
-        switch (op) {
-        case EQ:
-            return (value == constant);
-        case GT:
-            return (value > constant);
-        case LS:
-            return (value < constant);
-        case GTE:
-            return (value >= constant);
-        case LSE:
-            return (value <= constant);
-        default:
-            return false;
-        }
-    };
+struct SARG {
+    std::string col;
+    op_type op;
+    VALUE_TYPE constant;
 };
 } // namespace access_methods_types
 #endif

@@ -5,15 +5,11 @@
 #include <cstddef>
 #include <cstdio>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
-#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <type_traits>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -24,7 +20,7 @@ struct col_attrs {
     std::string column_name;
     parser_types::COLUMN_TYPE column_type;
 
-    template <typename T> bool match(parser_types::COLUMN_TYPE col_type, T value) const {
+    template <typename T> bool col_type_match(parser_types::COLUMN_TYPE col_type, T value) const {
         if (col_type == parser_types::STRING) {
             return std::is_same_v<T, std::string>;
         } else if (col_type == parser_types::INTEGER) {

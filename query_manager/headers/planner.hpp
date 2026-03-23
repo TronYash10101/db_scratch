@@ -1,24 +1,27 @@
 #ifndef PLANNER
 #define PLANNER
 
+#include "../../catalog_manager/headers/schmea_manager.hpp"
 #include "../../storage_manager/headers/access_methods.hpp"
 #include "../../storage_manager/headers/insert.hpp"
 #include "../../storage_manager/headers/types.hpp"
-#include "lexer.hpp"
 #include "types.hpp"
 #include <atomic>
 #include <cstring>
-#include <iostream>
 #include <optional>
 #include <string>
-#include <type_traits>
+#include <utility>
+#include <variant>
 #include <vector>
 
 namespace planner {
 
 class Operator {
   protected:
+    schema::tables_attrs table_name;
+
   public:
+    Operator(schema::tables_attrs &tn) : table_name(std::move(tn)) {}
     virtual std::optional<access_methods_types::row_t> next() = 0;
     virtual void init() = 0;
     virtual void close() = 0;
@@ -32,8 +35,8 @@ class Seq_scan : public Operator {
     // specifies this is the last op
 
   public:
-    Seq_scan(access_methods::Access_methods &access_methods, buffer_manager::buffer_pool &buff_pool)
-        : am(access_methods), buff_pool(buff_pool), heap_scan(buff_pool) {}
+    Seq_scan(schema::tables_attrs &tn, access_methods::Access_methods &access_methods, buffer_manager::buffer_pool &buff_pool)
+        : am(access_methods), buff_pool(buff_pool), heap_scan(buff_pool), Operator(tn) {}
 
     void init() override {}
 
@@ -67,12 +70,7 @@ class Filter : public Operator {
             } else if (predicate.op == "<") {
                 ret_sarg.op = access_methods_types::LS;
             }
-
-            if (predicate.col == "x") {
-                ret_sarg.col = access_methods_types::X;
-            } else if (predicate.col == "y") {
-                ret_sarg.col = access_methods_types::Y;
-            };
+            ret_sarg.col = predicate.col;
             ret_sarg.constant = std::stoi(predicate.value);
             return ret_sarg;
         } catch (...) {
@@ -80,20 +78,42 @@ class Filter : public Operator {
         }
     };
     access_methods_types::SARG to_match;
+    std::optional<bool> match_sarg(std::optional<access_methods_types::row_t> res_row, size_t row_no) {
+        switch (to_match.op) {
+        case access_methods_types::EQ:
+            return (to_match.constant == res_row.value().row[row_no]);
+        case access_methods_types::GT:
+            return (to_match.constant < res_row.value().row[row_no]);
+        case access_methods_types::GTE:
+            return (to_match.constant <= res_row.value().row[row_no]);
+        case access_methods_types::LS:
+            return (to_match.constant > res_row.value().row[row_no]);
+        case access_methods_types::LSE:
+            return (to_match.constant >= res_row.value().row[row_no]);
+        }
+        return std::nullopt;
+    }
     Operator &next_op;
 
   public:
-    Filter(Operator &op, parser_types::Predicate &predicate) : next_op(op), predicate(predicate){};
+    Filter(schema::tables_attrs &tn, Operator &op, parser_types::Predicate &predicate) : next_op(op), predicate(predicate), Operator(tn){};
     void init() override { to_match = parse_predicate(); };
 
     std::optional<access_methods_types::row_t> next() override {
         /* Checks SARGs */
         std::optional<access_methods_types::row_t> res_row = this->next_op.next();
+        size_t search_column;
+
+        for (int i = 0; i < table_name.columns.size(); i++) {
+            if (table_name.columns[i].column_name == to_match.col) {
+                search_column = i;
+            }
+        }
+
         while (res_row.has_value()) {
-            if (to_match.match(res_row.value())) {
+            if (match_sarg(res_row.value(), search_column)) {
                 return res_row;
             }
-
             res_row = this->next_op.next();
         }
         return std::nullopt;
@@ -108,7 +128,7 @@ class Projection : public Operator {
     parser_types::SELECT_AST &ast;
 
   public:
-    Projection(Operator &op, parser_types::SELECT_AST &ast) : next_op(op), ast(ast) {}
+    Projection(schema::tables_attrs tn, Operator &op, parser_types::SELECT_AST &ast) : next_op(op), ast(ast), Operator(tn) {}
 
     void init() override {};
     std::optional<access_methods_types::row_t> next() override {
@@ -135,16 +155,18 @@ class Insert : public Operator {
     std::atomic<int> curr_row = 0;
 
   public:
-    Insert(Operator *next_op, parser_types::INSERT_AST &ast, access_methods::Access_methods &am, buffer_manager::buffer_pool &buff_pool,
-           index_write::root_struct &curr_root)
-        : next_op(next_op), ast(ast), am(am), buff_pool(buff_pool), curr_root(curr_root){};
+    Insert(schema::tables_attrs &tn, Operator *next_op, parser_types::INSERT_AST &ast, access_methods::Access_methods &am,
+           buffer_manager::buffer_pool &buff_pool, index_write::root_struct &curr_root)
+        : next_op(next_op), ast(ast), am(am), buff_pool(buff_pool), curr_root(curr_root), Operator(tn){};
 
     void init() override {}
 
     std::optional<access_methods_types::row_t> next() override {
         access_methods_types::row_t inserted_row;
         if (curr_row < ast.values.size()) {
-            curr_root.root_pid = insert::create_entry(buff_pool, am, ast.values[curr_row], curr_root);
+            if (auto v = insert::create_entry(buff_pool, am, ast.values[curr_row], &curr_root)) {
+                curr_root.root_pid = v.value();
+            }
             curr_row++;
             return inserted_row;
         }
@@ -155,11 +177,13 @@ class Insert : public Operator {
 
 std::vector<access_methods_types::row_t> select_plan(std::vector<std::unique_ptr<Operator>> &operators,
                                                      buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,
-                                                     parser_types::SELECT_AST &ast);
+                                                     schema::schema_manager &sch_man, parser_types::SELECT_AST &ast,
+                                                     std::string *schema_name);
 
 std::vector<access_methods_types::row_t> insert_plan(std::vector<std::unique_ptr<Operator>> &operators,
                                                      buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,
-                                                     parser_types::INSERT_AST &ast, index_write::root_struct &curr_root);
+                                                     schema::schema_manager &sch_man, parser_types::INSERT_AST &ast,
+                                                     index_write::root_struct &curr_root, std::string *schema_name);
 
 }; // namespace planner
 

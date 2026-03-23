@@ -12,6 +12,7 @@ access_methods::Access_methods::Access_methods() {}
 
 std::optional<access_methods_types::row_t> access_methods::Access_methods::heap_scan::scan() {
     access_methods_types::row_t *row = NULL;
+    // make curr_pid = 0, when full scan done, so that heap scan can scan again
 
     char *heap_page_data = buff_pool.page_access(curr_pid, diskoperator_types::HEAP_PAGE)->page_data;
     heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(heap_page_data);
@@ -26,7 +27,7 @@ std::optional<access_methods_types::row_t> access_methods::Access_methods::heap_
 
     if (heap_page != NULL && !heap_page->slots[curr_slot].deleted) {
         uint16_t offset = heap_page->slots[curr_slot].slot_offset;
-        row = reinterpret_cast<access_methods_types::row_t *>(heap_page->data + offset);
+        row = reinterpret_cast<access_methods_types::row_t *>(heap_page->data + offset); // change writing over here
     }
 
     buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);

@@ -1,22 +1,32 @@
 #include "headers/planner.hpp"
-#include <algorithm>
 #include <memory>
+#include <stdexcept>
 #include <utility>
+#include <variant>
 #include <vector>
 
 std::vector<access_methods_types::row_t> planner::select_plan(std::vector<std::unique_ptr<Operator>> &operators,
                                                               buffer_manager::buffer_pool &buff_pool,
                                                               access_methods::Access_methods &access_methods,
-                                                              parser_types::SELECT_AST &ast) {
+                                                              schema::schema_manager &sch_man, parser_types::SELECT_AST &ast,
+                                                              std::string *schema_name) {
 
     std::vector<access_methods_types::row_t> matched_rows;
     operators.reserve(3);
 
-    auto seq_scan = std::make_unique<Seq_scan>(access_methods, buff_pool);
+    std::optional<std::vector<schema::ENTITY_TYPE>> table_find = sch_man.entity_find(schema::TABLE, ast.table_name, schema_name);
+    schema::tables_attrs *table_ptr;
+    if (table_find.has_value()) {
+        if (!(table_ptr = std::get_if<schema::tables_attrs>(&table_find.value()[0]))) {
+            throw std::runtime_error("ERROR AT GETTING TABLE NAME FOR PLANNER");
+        }
+    }
+
+    auto seq_scan = std::make_unique<Seq_scan>(*table_ptr, access_methods, buff_pool);
     seq_scan->init();
-    auto filter = std::make_unique<Filter>(*seq_scan, ast.predicate);
+    auto filter = std::make_unique<Filter>(*table_ptr, *seq_scan, ast.predicate);
     filter->init();
-    auto project = std::make_unique<Projection>(*filter, ast);
+    auto project = std::make_unique<Projection>(*table_ptr, *filter, ast);
     project->init();
 
     operators.push_back(std::move(seq_scan));
@@ -34,12 +44,20 @@ std::vector<access_methods_types::row_t> planner::select_plan(std::vector<std::u
 
 std::vector<access_methods_types::row_t> planner::insert_plan(std::vector<std::unique_ptr<Operator>> &operators,
                                                               buffer_manager::buffer_pool &buff_pool,
-                                                              access_methods::Access_methods &access_methods, parser_types::INSERT_AST &ast,
-                                                              index_write::root_struct &curr_root) {
+                                                              access_methods::Access_methods &access_methods,
+                                                              schema::schema_manager &sch_man, parser_types::INSERT_AST &ast,
+                                                              index_write::root_struct &curr_root, std::string *schema_name) {
 
     operators.reserve(1);
     std::vector<access_methods_types::row_t> inserted_rows;
-    auto insert = std::make_unique<Insert>(nullptr, ast, access_methods, buff_pool, curr_root);
+    std::optional<std::vector<schema::ENTITY_TYPE>> table_find = sch_man.entity_find(schema::TABLE, ast.table_name, schema_name);
+    schema::tables_attrs *table_ptr;
+    if (table_find.has_value()) {
+        if (!(table_ptr = std::get_if<schema::tables_attrs>(&table_find.value()[0]))) {
+            throw std::runtime_error("ERROR AT GETTING TABLE NAME FOR PLANNER");
+        }
+    }
+    auto insert = std::make_unique<Insert>(*table_ptr, nullptr, ast, access_methods, buff_pool, curr_root);
 
     operators.push_back(std::move(insert));
     std::optional<access_methods_types::row_t> inserted_row = operators.back()->next();
