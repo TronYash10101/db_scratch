@@ -18,14 +18,14 @@ namespace schema {
 #pragma pack(push, 1)
 struct col_attrs {
     std::string column_name;
-    parser_types::COLUMN_TYPE column_type;
+    access_methods_types::SUPORTED_COLUMN_TYPE column_type;
 
-    template <typename T> bool col_type_match(parser_types::COLUMN_TYPE col_type, T value) const {
-        if (col_type == parser_types::STRING) {
+    template <typename T> bool col_type_match(access_methods_types::SUPORTED_COLUMN_TYPE col_type, T value) const {
+        if (col_type == access_methods_types::STRING) {
             return std::is_same_v<T, std::string>;
-        } else if (col_type == parser_types::INTEGER) {
+        } else if (col_type == access_methods_types::INTEGER) {
             return std::is_same_v<T, int>;
-        } else if (col_type == parser_types::FLOATING) {
+        } else if (col_type == access_methods_types::FLOATING) {
             return std::is_same_v<T, float>;
         }
         return false;

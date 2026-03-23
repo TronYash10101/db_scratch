@@ -11,9 +11,7 @@
 
 // namespace diskoperator_types
 namespace diskoperator_types {
-
 enum page_type { HEAP_PAGE, INDEX_PAGE };
-
 }
 
 // namespace buffer_manager_types
@@ -132,6 +130,7 @@ namespace access_methods_types {
 
 // Stored in heap page
 
+enum SUPORTED_COLUMN_TYPE { STRING, INTEGER, FLOATING };
 typedef enum { EQ, GT, LS, GTE, LSE } op_type;
 
 using VALUE_TYPE = std::variant<std::string, int, float>;

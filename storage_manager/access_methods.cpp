@@ -6,11 +6,14 @@
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+#include <variant>
 #include <vector>
 
 access_methods::Access_methods::Access_methods() {}
 
-std::optional<access_methods_types::row_t> access_methods::Access_methods::heap_scan::scan() {
+std::optional<access_methods_types::row_t>
+access_methods::Access_methods::heap_scan::scan(std::vector<size_t> &data_size_arr,
+                                                std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> &col_types) {
     access_methods_types::row_t *row = NULL;
     // make curr_pid = 0, when full scan done, so that heap scan can scan again
 
@@ -26,8 +29,25 @@ std::optional<access_methods_types::row_t> access_methods::Access_methods::heap_
     }
 
     if (heap_page != NULL && !heap_page->slots[curr_slot].deleted) {
-        uint16_t offset = heap_page->slots[curr_slot].slot_offset;
-        row = reinterpret_cast<access_methods_types::row_t *>(heap_page->data + offset); // change writing over here
+        size_t cum_offset = heap_page->slots[curr_slot].slot_offset;
+        if (data_size_arr.size() == col_types.size()) {
+            for (int i = 0; i < data_size_arr.size(); i++) {
+                access_methods_types::VALUE_TYPE data;
+                access_methods_types::SUPORTED_COLUMN_TYPE ct = col_types[i];
+                if (col_types[i] == access_methods_types::STRING) {
+                    data = std::string(heap_page->data + cum_offset, data_size_arr[i]);
+                } else if (col_types[i] == access_methods_types::INTEGER) {
+                    data = *reinterpret_cast<int *>(heap_page->data + cum_offset);
+                } else if (col_types[i] == access_methods_types::FLOATING) {
+                    data = *reinterpret_cast<float *>(heap_page->data + cum_offset);
+                }
+
+                row->row.push_back(data);
+                cum_offset += data_size_arr[i];
+            }
+        } else {
+            throw std::runtime_error("COLUMNS SIZES AND TYPES ARRAYS SIZE MISMATCH");
+        }
     }
 
     buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
