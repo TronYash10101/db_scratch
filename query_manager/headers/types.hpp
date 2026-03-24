@@ -19,9 +19,10 @@ struct Token {
 };
 
 const std::unordered_map<std::string, TOKEN_TYPE> lexer_table = {
-        {"SELECT", CLAUSE}, {"INSERT", CLAUSE}, {"INTO", CLAUSE}, {"VALUES", CLAUSE}, {"FROM", CLAUSE}, {"WHERE", CLAUSE},
-        {",", OPERATOR},    {"*", OPERATOR},    {"=", OPERATOR},  {"<", OPERATOR},    {">", OPERATOR},  {">=", OPERATOR},
-        {"<=", OPERATOR},   {";", OPERATOR},    {")", OPERATOR},  {"(", OPERATOR}};
+        {"SELECT", CLAUSE}, {"INSERT", CLAUSE}, {"INTO", CLAUSE},  {"VALUES", CLAUSE}, {"FROM", CLAUSE},
+        {"WHERE", CLAUSE},  {"CREATE", CLAUSE}, {"TABLE", CLAUSE}, {"SCHEMA", CLAUSE}, {",", OPERATOR},
+        {"*", OPERATOR},    {"=", OPERATOR},    {"<", OPERATOR},   {">", OPERATOR},    {">=", OPERATOR},
+        {"<=", OPERATOR},   {";", OPERATOR},    {")", OPERATOR},   {"(", OPERATOR}};
 } // namespace lexer_types
 
 namespace parser_types {

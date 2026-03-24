@@ -245,6 +245,84 @@ parser_types::INSERT_AST parser::Parser::parse_insert_clause(parser::token_itera
     return ast;
 }
 
+parser_types::SCHEMA_AST parser::Parser::parse_cschema_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager) {
+    parser_types::SCHEMA_AST ast;
+    lexer_types::Token sub_token = tok_it.get_next();
+
+    if (sub_token.token_value != "SCHEMA") {
+        throw std::runtime_error("EXPECTED KEYWORD SCHEMA");
+    }
+
+    lexer_types::Token schema_name = tok_it.get_next();
+    ast.schmea_name = schema_name.token_value;
+    return ast;
+}
+parser_types::CREATE_TABLE_AST parser::Parser::parse_ctable_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
+                                                                   std::string &schema_name) {
+
+    parser_types::CREATE_TABLE_AST ast;
+
+    lexer_types::Token sub_token = tok_it.get_next();
+    if (sub_token.token_value != "TABLE") {
+        throw std::runtime_error("EXPECTED KEYWORD TABLE");
+    }
+
+    lexer_types::Token table_name = tok_it.get_next();
+    if (table_name.token_type != lexer_types::IDENT) {
+        throw std::runtime_error("EXPECTED TABLE NAME");
+    }
+    ast.table_name = table_name.token_value;
+
+    lexer_types::Token next_tok = tok_it.get_next();
+    if (next_tok.token_value != "(") {
+        throw std::runtime_error("EXPECTED '(' FOR COLUMNS");
+    }
+
+    int col = 0;
+
+    next_tok = tok_it.get_next();
+
+    while (true) {
+        if (next_tok.token_type != lexer_types::IDENT) {
+            throw std::runtime_error("EXPECTED COLUMN NAME");
+        }
+
+        if (col >= ast.columns.size()) {
+            throw std::runtime_error("TOO MANY COLUMNS");
+        }
+
+        ast.columns[col].column_name = next_tok.token_value;
+
+        next_tok = tok_it.get_next();
+
+        if (next_tok.token_value == "STRING" || next_tok.token_value == "string") {
+            ast.columns[col].column_type = access_methods_types::STRING;
+        } else if (next_tok.token_value == "INT" || next_tok.token_value == "int") {
+            ast.columns[col].column_type = access_methods_types::INTEGER;
+        } else if (next_tok.token_value == "FLOAT" || next_tok.token_value == "float") {
+            ast.columns[col].column_type = access_methods_types::FLOATING;
+        } else {
+            throw std::runtime_error("INVALID COLUMN TYPE");
+        }
+
+        col++;
+
+        next_tok = tok_it.get_next();
+
+        if (next_tok.token_value == ")") {
+            break;
+        }
+
+        if (next_tok.token_value != ",") {
+            throw std::runtime_error("EXPECTED ',' OR ')'");
+        }
+
+        next_tok = tok_it.get_next();
+    }
+
+    return ast;
+}
+
 parser_types::ASTResult parser::Parser::grammer_check(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
                                                       std::string &schema_name) {
 
@@ -255,6 +333,9 @@ parser_types::ASTResult parser::Parser::grammer_check(parser::token_iterator &to
     }
     if (first_tok.token_value == "INSERT") {
         return parse_insert_clause(tok_it, schema_manager, schema_name);
+    }
+    if (first_tok.token_value == "CREATE") {
+        return parse_cschema_clause(tok_it, schema_manager);
     }
 
     throw std::runtime_error("COULD NOT CHECK GRAMMER");

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <numeric>
 #include <stdexcept>
+#include <type_traits>
+#include <variant>
 
 heap_page_types::Slot heap_writer::heap_write(char *raw_heap_page, const access_methods_types::row_t &row,
                                               const std::vector<size_t> &row_data_size_arr) {
@@ -40,9 +42,24 @@ heap_page_types::Slot heap_writer::heap_write(char *raw_heap_page, const access_
     // Data fill
     size_t cum_offset = 0;
     for (int i = 0; i < row.row.size(); i++) {
-        memcpy(heap_page->data + heap_page->slots[heap_page->page_header.slot_count - 1].slot_offset + cum_offset, &row.row[i],
-               row_data_size_arr[i]);
-        cum_offset += row_data_size_arr[i];
+        char *dest = heap_page->data + heap_page->slots[heap_page->page_header.slot_count - 1].slot_offset + cum_offset;
+
+        std::visit(
+                [&](auto &&val) {
+                    using T = std::decay_t<decltype(val)>;
+
+                    if constexpr (std::is_same_v<T, int>) {
+                        memcpy(dest, &val, sizeof(int));
+                        cum_offset += row_data_size_arr[i];
+                    } else if constexpr (std::is_same_v<T, float>) {
+                        memcpy(dest, &val, sizeof(float));
+                        cum_offset += row_data_size_arr[i];
+                    } else if constexpr (std::is_same_v<T, std::string>) {
+                        memcpy(dest, val.c_str(), val.size());
+                        cum_offset += val.size();
+                    }
+                },
+                row.row[i]);
     }
 
     return heap_page->slots[heap_page->page_header.slot_count - 1];

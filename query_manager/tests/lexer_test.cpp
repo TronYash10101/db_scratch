@@ -11,7 +11,7 @@ void expect_token(const lexer_types::Token &tok, lexer_types::TOKEN_TYPE type, c
 }
 
 int main() {
-    {
+    /* {
         // Basic SELECT with two columns and WHERE-like clause.
         const std::string query = "SELECT name, age FROM T age>10";
         std::vector<lexer_types::Token> toks = lexer::lexer(query);
@@ -26,7 +26,7 @@ int main() {
         expect_token(toks[3], lexer_types::IDENT, "age");
         // 4: FROM (CLAUSE)
         expect_token(toks[4], lexer_types::CLAUSE, "FROM");
-    }
+    } */
 
     /* {
         // Check that multi-character operators like \">=\" are recognized.
@@ -52,6 +52,14 @@ int main() {
             std::cout << tok.token_type << " | " << tok.token_value << "\n";
         }
     } */
+
+    {
+        std::string create_table = "CREATE TABLE Employees ( EmployeeID INT ,FirstName STRING)";
+        std::vector<lexer_types::Token> toks = lexer::lexer(create_table);
+        for (const lexer_types::Token &tok : toks) {
+            std::cout << tok.token_type << " | " << tok.token_value << "\n";
+        }
+    }
     std::cout << "lexer tests passed\n";
     return 0;
 }

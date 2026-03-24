@@ -1,10 +1,16 @@
 #!/usr/bin/bash
 
-if [ $# -eq 0 ]; then
-	echo "Mention target name in front of this file"
-	exit 1
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <target_name> [mode]"
+    exit 1
 fi
 
 BIN=$1
+MODE=$2
 
-./test_bins/"${BIN}"
+if [[ "$BIN" == "schm_test" && -z "$MODE" ]]; then
+    echo -e "Give mode for this test:\n0 = don't wipe schema\n1 = wipe whole schema"
+    exit 1
+fi
+
+./test_bins/"${BIN}" "${MODE}"

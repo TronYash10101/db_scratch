@@ -130,6 +130,7 @@ namespace access_methods_types {
 
 // Stored in heap page
 
+inline constexpr size_t STRING_MAX_SIZE = 500;
 enum SUPORTED_COLUMN_TYPE { STRING, INTEGER, FLOATING };
 typedef enum { EQ, GT, LS, GTE, LSE } op_type;
 

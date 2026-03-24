@@ -1,5 +1,6 @@
 #include "headers/planner.hpp"
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -22,7 +23,31 @@ std::vector<access_methods_types::row_t> planner::select_plan(std::vector<std::u
         }
     }
 
-    auto seq_scan = std::make_unique<Seq_scan>(*table_ptr, access_methods, buff_pool);
+    std::optional<std::vector<schema::ENTITY_TYPE>> c_t = sch_man.entity_find(schema::TABLE, ast.table_name, schema_name);
+
+    std::vector<size_t> data_size_arr;
+    std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> col_types;
+
+    if (c_t.has_value()) {
+        if (auto *c_t_ptr = std::get_if<schema::tables_attrs>(&c_t.value()[0])) {
+            for (const auto &ele : c_t_ptr->columns) {
+                col_types.push_back(ele.column_type);
+                switch (ele.column_type) {
+                case access_methods_types::STRING:
+                    data_size_arr.push_back(access_methods_types::STRING_MAX_SIZE);
+                    break;
+                case access_methods_types::INTEGER:
+                    data_size_arr.push_back(sizeof(int));
+                    break;
+                case access_methods_types::FLOATING:
+                    data_size_arr.push_back(sizeof(float));
+                    break;
+                }
+            }
+        }
+    }
+
+    auto seq_scan = std::make_unique<Seq_scan>(*table_ptr, access_methods, buff_pool, data_size_arr, col_types);
     seq_scan->init();
     auto filter = std::make_unique<Filter>(*table_ptr, *seq_scan, ast.predicate);
     filter->init();

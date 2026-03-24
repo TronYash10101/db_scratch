@@ -32,6 +32,9 @@ class Parser {
                             std::string &schema_name);
     parser_types::INSERT_AST parse_insert_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
                                                  std::string &schema_name);
+    parser_types::SCHEMA_AST parse_cschema_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager);
+    parser_types::CREATE_TABLE_AST parse_ctable_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
+                                                       std::string &schema_name);
     parser_types::SELECT_AST parse_select_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
                                                  std::string &schema_name);
 

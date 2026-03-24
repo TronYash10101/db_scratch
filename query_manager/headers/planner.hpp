@@ -32,18 +32,22 @@ class Seq_scan : public Operator {
     access_methods::Access_methods &am;
     buffer_manager::buffer_pool &buff_pool;
     access_methods::Access_methods::heap_scan heap_scan;
+    std::vector<size_t> &data_size_arr;
+    std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> &col_types;
     // specifies this is the last op
 
   public:
-    Seq_scan(schema::tables_attrs &tn, access_methods::Access_methods &access_methods, buffer_manager::buffer_pool &buff_pool)
-        : am(access_methods), buff_pool(buff_pool), heap_scan(buff_pool), Operator(tn) {}
+    Seq_scan(schema::tables_attrs &tn, access_methods::Access_methods &access_methods, buffer_manager::buffer_pool &buff_pool,
+             std::vector<size_t> &data_size_arr, std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> &col_types)
+        : am(access_methods), buff_pool(buff_pool), heap_scan(buff_pool), data_size_arr(data_size_arr), col_types(col_types), Operator(tn) {
+    }
 
     void init() override {}
 
     std::optional<access_methods_types::row_t> next() override {
         // calls heap scan for next row, and return
 
-        std::optional<access_methods_types::row_t> res = heap_scan.scan();
+        std::optional<access_methods_types::row_t> res = heap_scan.scan(data_size_arr, col_types);
         if (res.has_value()) {
             return res;
         }
