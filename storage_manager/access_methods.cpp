@@ -14,7 +14,7 @@ access_methods::Access_methods::Access_methods() {}
 std::optional<access_methods_types::row_t>
 access_methods::Access_methods::heap_scan::scan(std::vector<size_t> &data_size_arr,
                                                 std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> &col_types) {
-    access_methods_types::row_t *row = NULL;
+    access_methods_types::row_t *row;
     // make curr_pid = 0, when full scan done, so that heap scan can scan again
 
     char *heap_page_data = buff_pool.page_access(curr_pid, diskoperator_types::HEAP_PAGE)->page_data;

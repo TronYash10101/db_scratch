@@ -25,8 +25,8 @@ void schema::schema_manager::schema_create_table(const std::string &schema_name,
     table_attr.table_name = ast.table_name;
     table_attr.columns = columns;
 
-    std::optional<std::vector<ENTITY_TYPE>> matched_idx = entity_find(SCHEMA, schema_name);
-    if (matched_idx.has_value()) {
+    // std::optional<std::vector<ENTITY_TYPE>> matched_idx = entity_find(SCHEMA, schema_name);
+    /* if (matched_idx.has_value()) {
         if (auto *ptr = std::get_if<schema_attr>(&matched_idx.value()[0])) {
             ptr->tables.push_back(table_attr);
         } else {
@@ -34,6 +34,9 @@ void schema::schema_manager::schema_create_table(const std::string &schema_name,
         }
     } else {
         throw std::runtime_error("NO SCHEMA FOUND");
+    } */
+    for (schema_attr &ele : schema_catalog) {
+        ele.tables.push_back(table_attr);
     }
 }
 

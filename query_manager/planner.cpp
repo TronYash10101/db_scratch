@@ -10,7 +10,7 @@ std::vector<access_methods_types::row_t> planner::select_plan(std::vector<std::u
                                                               buffer_manager::buffer_pool &buff_pool,
                                                               access_methods::Access_methods &access_methods,
                                                               schema::schema_manager &sch_man, parser_types::SELECT_AST &ast,
-                                                              std::string *schema_name) {
+                                                              std::string schema_name) {
 
     std::vector<access_methods_types::row_t> matched_rows;
     operators.reserve(3);
@@ -71,7 +71,7 @@ std::vector<access_methods_types::row_t> planner::insert_plan(std::vector<std::u
                                                               buffer_manager::buffer_pool &buff_pool,
                                                               access_methods::Access_methods &access_methods,
                                                               schema::schema_manager &sch_man, parser_types::INSERT_AST &ast,
-                                                              index_write::root_struct &curr_root, std::string *schema_name) {
+                                                              index_write::root_struct &curr_root, std::string schema_name) {
 
     operators.reserve(1);
     std::vector<access_methods_types::row_t> inserted_rows;

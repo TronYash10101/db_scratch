@@ -182,12 +182,12 @@ class Insert : public Operator {
 std::vector<access_methods_types::row_t> select_plan(std::vector<std::unique_ptr<Operator>> &operators,
                                                      buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,
                                                      schema::schema_manager &sch_man, parser_types::SELECT_AST &ast,
-                                                     std::string *schema_name);
+                                                     std::string schema_name);
 
 std::vector<access_methods_types::row_t> insert_plan(std::vector<std::unique_ptr<Operator>> &operators,
                                                      buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods,
                                                      schema::schema_manager &sch_man, parser_types::INSERT_AST &ast,
-                                                     index_write::root_struct &curr_root, std::string *schema_name);
+                                                     index_write::root_struct &curr_root, std::string schema_name);
 
 }; // namespace planner
 

@@ -20,13 +20,16 @@ struct col_attrs {
     std::string column_name;
     access_methods_types::SUPORTED_COLUMN_TYPE column_type;
 
-    template <typename T> bool col_type_match(access_methods_types::SUPORTED_COLUMN_TYPE col_type, T value) const {
+    bool col_type_match(access_methods_types::SUPORTED_COLUMN_TYPE col_type, std::string value) const {
+        size_t idx = 0;
         if (col_type == access_methods_types::STRING) {
-            return std::is_same_v<T, std::string>;
+            return true;
         } else if (col_type == access_methods_types::INTEGER) {
-            return std::is_same_v<T, int>;
+            std::stoi(value, &idx);
+            return idx == value.size();
         } else if (col_type == access_methods_types::FLOATING) {
-            return std::is_same_v<T, float>;
+            std::stod(value, &idx);
+            return idx == value.size();
         }
         return false;
     }
@@ -64,24 +67,27 @@ class schema_manager {
 
   public:
     schema_manager(const std::filesystem::path &schmea_table_path) : schmea_table_path(schmea_table_path) {
-        if (!std::filesystem::exists(schmea_table_path)) {
-            schmea_file = fopen(schmea_table_path.c_str(), "rb+");
-        } else {
-            schmea_file = fopen(schmea_table_path.c_str(), "wb+");
+        schmea_file = fopen(schmea_table_path.c_str(), "ab+");
+
+        if (!schmea_file) {
+            throw std::runtime_error("ERROR CREATING SCHEMA FILE");
         }
+
         fseek(schmea_file, 0, SEEK_END);
         schema_file_size = ftell(schmea_file);
         fseek(schmea_file, 0, SEEK_SET);
 
-        deserialize();
+        if (schema_file_size > 0) // else handle for emtpy files
+            deserialize();
     };
 
     void create_schema(parser_types::SCHEMA_AST &ast);
     void schema_create_table(const std::string &schema_name, parser_types::CREATE_TABLE_AST &ast);
 
     std::optional<std::vector<ENTITY_TYPE>> entity_find(FIND_TYPE find, const std::string &child_context,
-                                                        std::string *parent_context = nullptr,
-                                                        std::string *grand_parent_context = nullptr) {
+                                                        std::optional<std::string_view> parent_context = std::nullopt,
+                                                        std::optional<std::string_view> grand_parent_context = std::nullopt) {
+
         std::vector<ENTITY_TYPE> res;
         switch (find) {
         case SCHEMA:
@@ -95,9 +101,9 @@ class schema_manager {
             break;
 
         case TABLE:
-            if (parent_context != nullptr) {
+            if (parent_context.has_value()) {
 
-                std::optional<std::vector<ENTITY_TYPE>> schema_find = entity_find(SCHEMA, *parent_context);
+                std::optional<std::vector<ENTITY_TYPE>> schema_find = entity_find(SCHEMA, std::string(parent_context.value()));
                 if (schema_find.has_value() && schema_find->size() == 1) {
                     if (auto *curr_schema = std::get_if<schema_attr>(&schema_find.value()[0])) {
                         for (int k = 0; k < curr_schema->tables.size(); k++) {
@@ -113,22 +119,26 @@ class schema_manager {
             break;
 
         case COLUMN:
-            if (grand_parent_context != nullptr && parent_context != nullptr) {
-                std::optional<std::vector<ENTITY_TYPE>> schema_find = entity_find(SCHEMA, *grand_parent_context);
+            if (grand_parent_context.has_value() && parent_context.has_value()) {
+                std::optional<std::vector<ENTITY_TYPE>> schema_find = entity_find(SCHEMA, std::string(grand_parent_context.value()));
 
-                std::optional<std::vector<ENTITY_TYPE>> table_find = entity_find(TABLE, child_context, parent_context);
+                std::optional<std::vector<ENTITY_TYPE>> table_find =
+                        entity_find(TABLE, std::string(parent_context.value()), std::string(grand_parent_context.value()));
 
                 if (schema_find.has_value() && table_find.has_value()) {
-                    if (tables_attrs *curr_table = std::get_if<tables_attrs>(&table_find.value()[0])) {
-                        if (child_context == "*") {
-                            for (size_t z = 0; z < curr_table->columns.size(); z++) {
-                                res.push_back(curr_table->columns[z]);
-                            }
-                            return res;
-                        } else {
-                            for (size_t z = 0; z < curr_table->columns.size(); z++) {
-                                if (child_context == curr_table->columns[z].column_name) {
-                                    return res;
+                    if (!table_find->empty()) {
+                        if (tables_attrs *curr_table = std::get_if<tables_attrs>(&table_find.value()[0])) {
+                            if (child_context == "*") {
+                                for (size_t z = 0; z < curr_table->columns.size(); z++) {
+                                    res.push_back(curr_table->columns[z]);
+                                }
+                                return res;
+                            } else {
+                                for (size_t z = 0; z < curr_table->columns.size(); z++) {
+                                    if (child_context == curr_table->columns[z].column_name) {
+                                        res.push_back(curr_table->columns[z]);
+                                        return res;
+                                    }
                                 }
                             }
                         }
@@ -143,16 +153,21 @@ class schema_manager {
     };
     void iterate_catalog() const {
         for (const schema_attr &ele : schema_catalog) {
-            std::cout << "Schema name: ";
-            std::cout << ele.schema_name;
-            std::cout << "Table name: ";
+            // Schema Header
+            std::cout << "========================================\n";
+            std::cout << "  SCHEMA: " << ele.schema_name << "\n";
+            std::cout << "========================================\n";
+
             for (const tables_attrs &table : ele.tables) {
-                std::cout << table.table_name;
-                std::cout << "\n";
+                // Table Header (Indented)
+                std::cout << "  |-- TABLE: " << table.table_name << "\n";
+                std::cout << "  |   └-- COLUMNS:\n";
+
                 for (const col_attrs &col : table.columns) {
-                    std::cout << col.column_name;
-                    std::cout << "\n";
+                    // Column List (Double Indented)
+                    std::cout << "  |       • " << col.column_name << "\n";
                 }
+                std::cout << "  |\n"; // Spacer between tables
             }
             std::cout << "\n";
         }
