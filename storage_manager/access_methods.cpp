@@ -11,56 +11,60 @@
 
 access_methods::Access_methods::Access_methods() {}
 
-std::optional<access_methods_types::row_t>
+access_methods_types::ScanResult
 access_methods::Access_methods::heap_scan::scan(std::vector<size_t> &data_size_arr,
                                                 std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> &col_types) {
-    access_methods_types::row_t *row;
-    // make curr_pid = 0, when full scan done, so that heap scan can scan again
+    // Need a EOF or EOP, return nullopt only on error
 
-    char *heap_page_data = buff_pool.page_access(curr_pid, diskoperator_types::HEAP_PAGE)->page_data;
-    heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(heap_page_data);
+    while (true) {
 
-    if (heap_page == NULL)
-        return std::nullopt;
+        access_methods_types::row_t row;
 
-    if (curr_slot >= heap_page->page_header.slot_count) {
-        buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
-        return std::nullopt;
-    }
+        char *heap_page_data = buff_pool.page_access(curr_pid, diskoperator_types::HEAP_PAGE)->page_data;
+        heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(heap_page_data);
 
-    if (heap_page != NULL && !heap_page->slots[curr_slot].deleted) {
+        if (heap_page == NULL) {
+            buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
+            return {access_methods_types::ScanStatus::ERR, std::nullopt}; // can also return EOPs
+        }
+
+        if (curr_slot == heap_page->page_header.slot_count) {
+            buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
+            curr_pid++; // this should be equal to next pid for that particular table
+            curr_slot = 0;
+            return {access_methods_types::EOP, std::nullopt};
+        }
+
+        // reading individual row
         size_t cum_offset = heap_page->slots[curr_slot].slot_offset;
-        if (data_size_arr.size() == col_types.size()) {
-            for (int i = 0; i < data_size_arr.size(); i++) {
-                access_methods_types::VALUE_TYPE data;
-                access_methods_types::SUPORTED_COLUMN_TYPE ct = col_types[i];
-                if (col_types[i] == access_methods_types::STRING) {
-                    data = std::string(heap_page->data + cum_offset, data_size_arr[i]);
-                } else if (col_types[i] == access_methods_types::INTEGER) {
-                    data = *reinterpret_cast<int *>(heap_page->data + cum_offset);
-                } else if (col_types[i] == access_methods_types::FLOATING) {
-                    data = *reinterpret_cast<float *>(heap_page->data + cum_offset);
-                }
+        if (!heap_page->slots[curr_slot].deleted) {
+            if (data_size_arr.size() == col_types.size()) {
+                for (int i = 0; i < data_size_arr.size(); i++) {
+                    access_methods_types::VALUE_TYPE data;
+                    access_methods_types::SUPORTED_COLUMN_TYPE ct = col_types[i];
+                    if (col_types[i] == access_methods_types::STRING) {
+                        data = std::string(heap_page->data + cum_offset, data_size_arr[i]);
+                    } else if (col_types[i] == access_methods_types::INTEGER) {
+                        data = *reinterpret_cast<int *>(heap_page->data + cum_offset);
+                    } else if (col_types[i] == access_methods_types::FLOATING) {
+                        data = *reinterpret_cast<float *>(heap_page->data + cum_offset);
+                    }
 
-                row->row.push_back(data);
-                cum_offset += data_size_arr[i];
+                    row.row.push_back(data);
+                    cum_offset += data_size_arr[i];
+                }
+                curr_slot++;
+            } else {
+                throw std::runtime_error("COLUMNS SIZES AND TYPES ARRAYS SIZE MISMATCH");
             }
         } else {
-            throw std::runtime_error("COLUMNS SIZES AND TYPES ARRAYS SIZE MISMATCH");
+            curr_slot++;
+            continue;
         }
-    }
 
-    buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
-
-    if (curr_slot == heap_page->page_header.slot_count - 1) {
-        curr_pid++;
-        curr_slot = 0;
-    } else {
-        curr_slot++;
+        buff_pool.un_pin(curr_pid, diskoperator_types::HEAP_PAGE);
+        return {access_methods_types::ScanStatus::SUCCESS, row};
     }
-    if (row == NULL)
-        return std::nullopt;
-    return *row;
 }
 
 void access_methods::Access_methods::heap_scan::heap_table_push(heap_page_types::page_id pid) { HeapTable.push_back(pid); }

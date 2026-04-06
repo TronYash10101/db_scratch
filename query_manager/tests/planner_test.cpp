@@ -29,7 +29,7 @@ int main() {
 
         std::string create_schema = "CREATE SCHEMA abc";
         std::string create_table = "CREATE TABLE test (age INT)";
-        std::string insert_query = "INSERT INTO test (age) VALUES (2)";
+        std::string insert_query = "INSERT INTO test (age) VALUES (9)";
 
         parser::token_iterator insert_tok_it(insert_query);
         parser::token_iterator s_tok_it(create_schema);
@@ -67,12 +67,12 @@ int main() {
         if (auto insert_ast = std::get_if<parser_types::INSERT_AST>(&insert_res_ast)) {
 
             std::vector<access_methods_types::row_t> res =
-                    planner::insert_plan(insert_operators, buff_pool, access_methods, sch_ma, *insert_ast, curr_root, schema_name);
+                    planner::insert_plan(buff_pool, access_methods, sch_ma, *insert_ast, curr_root, schema_name);
         }
     }
 
     {
-        std::string select_query = "SELECT age FROM test WHERE age >= 1";
+        std::string select_query = "SELECT age FROM test WHERE age >= 5";
 
         parser::token_iterator select_tok_it(select_query);
         std::vector<std::unique_ptr<planner::Operator>> select_operators;
@@ -83,19 +83,18 @@ int main() {
 
         parser_types::ASTResult select_res_ast = Parser.grammer_check(select_tok_it, sch_ma, schema_n);
         if (auto select_ast = std::get_if<parser_types::SELECT_AST>(&select_res_ast)) {
-            std::vector<access_methods_types::row_t> r =
-                    planner::select_plan(select_operators, buff_pool, access_methods, sch_ma, *select_ast, schema_n);
+            std::vector<access_methods_types::row_t> r = planner::select_plan(buff_pool, access_methods, sch_ma, *select_ast, schema_n);
             if (r.size() == 0) {
                 std::cout << "no row found";
             } else {
                 for (const access_methods_types::row_t &ele : r) {
                     for (const auto &row : ele.row) {
                         if (const int *val = std::get_if<int>(&row)) {
-                            std::cout << val;
+                            std::cout << *val;
                         } else if (const std::string *val = std::get_if<std::string>(&row)) {
-                            std::cout << val;
+                            std::cout << *val;
                         } else if (const float *val = std::get_if<float>(&row)) {
-                            std::cout << val;
+                            std::cout << *val;
                         }
                     }
                 }

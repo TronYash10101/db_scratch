@@ -1,7 +1,7 @@
 .envrc
 heap.bin
 index.bin
-gist_control/venv/
+gist_control/
 build/
 notes/
 **/**/\\

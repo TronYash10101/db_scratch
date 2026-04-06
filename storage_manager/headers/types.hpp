@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <optional>
 #include <stdint.h>
 #include <variant>
 #include <vector>
@@ -125,10 +126,7 @@ struct Node {
 
 } // namespace btree_page_types
 
-// namespace access_methods_types
 namespace access_methods_types {
-
-// Stored in heap page
 
 inline constexpr size_t STRING_MAX_SIZE = 500;
 enum SUPORTED_COLUMN_TYPE { STRING, INTEGER, FLOATING };
@@ -144,5 +142,12 @@ struct SARG {
     op_type op;
     VALUE_TYPE constant;
 };
+
+enum ScanStatus { SUCCESS, EOP, EOPs, ERR };
+struct ScanResult {
+    ScanStatus scan_status;
+    std::optional<row_t> scan_result;
+};
+
 } // namespace access_methods_types
 #endif

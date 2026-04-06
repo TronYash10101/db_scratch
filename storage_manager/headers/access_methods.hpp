@@ -19,14 +19,11 @@ struct split_res {
 //     int promoted_key;
 //     btree_page_types::node_id new_pid;
 // };
+
 class Access_methods {
   private:
   public:
     explicit Access_methods();
-
-    // Only scans the heap page for matching tuple, if found return an iterator
-    // to it else NULL (Don't try to mix data storing logic here, assume correct
-    // is present)
 
     class heap_scan {
       private:
@@ -39,8 +36,8 @@ class Access_methods {
       public:
         heap_scan(buffer_manager::buffer_pool &buff_pool) : HeapTable(), buff_pool(buff_pool) { HeapTable.push_back(curr_pid); };
         /* Does not return deleted rows  */
-        std::optional<access_methods_types::row_t> scan(std::vector<size_t> &data_size_arr,
-                                                        std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> &col_types);
+        access_methods_types::ScanResult scan(std::vector<size_t> &data_size_arr,
+                                              std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> &col_types);
         void heap_table_push(heap_page_types::page_id pid);
     };
 
