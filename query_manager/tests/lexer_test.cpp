@@ -13,7 +13,7 @@ void expect_token(const lexer_types::Token &tok, lexer_types::TOKEN_TYPE type, c
 int main() {
     /* {
         // Basic SELECT with two columns and WHERE-like clause.
-        const std::string query = "SELECT name, age FROM T age>10";
+        const std::string query = "SELECT name, age FROM T age==10";
         std::vector<lexer_types::Token> toks = lexer::lexer(query);
 
         // 0: SELECT (CLAUSE)
@@ -54,7 +54,7 @@ int main() {
     } */
 
     {
-        std::string create_table = "CREATE TABLE Employees ( EmployeeID INT ,FirstName STRING)";
+        std::string create_table = "SELECT age FROM test WHERE age == 10";
         std::vector<lexer_types::Token> toks = lexer::lexer(create_table);
         for (const lexer_types::Token &tok : toks) {
             std::cout << tok.token_type << " | " << tok.token_value << "\n";

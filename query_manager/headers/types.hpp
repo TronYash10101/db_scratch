@@ -22,7 +22,7 @@ const std::unordered_map<std::string, TOKEN_TYPE> lexer_table = {
         {"SELECT", CLAUSE}, {"INSERT", CLAUSE}, {"INTO", CLAUSE},  {"VALUES", CLAUSE}, {"FROM", CLAUSE},
         {"WHERE", CLAUSE},  {"CREATE", CLAUSE}, {"TABLE", CLAUSE}, {"SCHEMA", CLAUSE}, {",", OPERATOR},
         {"*", OPERATOR},    {"=", OPERATOR},    {"<", OPERATOR},   {">", OPERATOR},    {">=", OPERATOR},
-        {"<=", OPERATOR},   {";", OPERATOR},    {")", OPERATOR},   {"(", OPERATOR}};
+        {"<=", OPERATOR},   {"==", OPERATOR},   {";", OPERATOR},   {")", OPERATOR},    {"(", OPERATOR}};
 } // namespace lexer_types
 
 namespace parser_types {
@@ -75,7 +75,21 @@ using ASTResult = std::variant<SELECT_AST, INSERT_AST, SCHEMA_AST, CREATE_TABLE_
 // const std::unordered_set<std::string> table = {"test"};
 
 } // namespace parser_types
-
+inline access_methods_types::VALUE_TYPE convert_correct_type(const std::string &to_convert,
+                                                             const access_methods_types::SUPORTED_COLUMN_TYPE &type) {
+    if (to_convert.empty()) {
+        std::cerr << "Error: Attempting to convert an empty string!" << std::endl;
+        return 0; // or handle appropriately
+    }
+    switch (type) {
+    case access_methods_types::STRING:
+        return to_convert;
+    case access_methods_types::INTEGER:
+        return std::stoi(to_convert);
+    case access_methods_types::FLOATING:
+        return std::stof(to_convert);
+    }
+};
 namespace planner {} // namespace planner
 
 #endif

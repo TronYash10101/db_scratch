@@ -17,7 +17,6 @@ access_methods::Access_methods::heap_scan::scan(std::vector<size_t> &data_size_a
     // Need a EOF or EOP, return nullopt only on error
 
     while (true) {
-
         access_methods_types::row_t row;
 
         char *heap_page_data = buff_pool.page_access(curr_pid, diskoperator_types::HEAP_PAGE)->page_data;
@@ -54,6 +53,7 @@ access_methods::Access_methods::heap_scan::scan(std::vector<size_t> &data_size_a
                     cum_offset += data_size_arr[i];
                 }
                 curr_slot++;
+
             } else {
                 throw std::runtime_error("COLUMNS SIZES AND TYPES ARRAYS SIZE MISMATCH");
             }

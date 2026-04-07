@@ -186,7 +186,6 @@ void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_t
         int i = 0;
         while (sub_tok.token_value != ")") {
             sub_tok = tok_it.get_next();
-            // std::cout << ast.table_name << ast.cols_name[i];
             if (sub_tok.token_type == lexer_types::IDENT) {
                 std::optional<std::vector<schema::ENTITY_TYPE>> ast_table =
                         schema_manager.entity_find(schema::TABLE, ast.table_name, schema_name);
@@ -199,9 +198,10 @@ void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_t
                         if (pt->col_type_match(pt->column_type, sub_tok.token_value)) {
                             if (auto *t_pt = std::get_if<schema::tables_attrs>(&ast_table.value()[0])) {
                                 this_row.row.resize(t_pt->columns.size());
-                                for (int k = 0; i < t_pt->columns.size(); i++) {
+                                for (int k = 0; k < t_pt->columns.size(); k++) {
                                     if (pt->column_name == t_pt->columns[k].column_name) {
-                                        this_row.row[k] = sub_tok.token_value;
+
+                                        this_row.row[k] = convert_correct_type(sub_tok.token_value, pt->column_type);
                                     }
                                 }
                             }

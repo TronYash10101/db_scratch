@@ -18,10 +18,8 @@ namespace planner {
 
 class Operator {
   protected:
-    schema::tables_attrs table_name;
-
   public:
-    Operator(schema::tables_attrs &tn) : table_name(std::move(tn)) {}
+    Operator() {}
     virtual access_methods_types::ScanResult next() = 0;
     virtual void init() = 0;
     virtual void close() = 0;
@@ -34,13 +32,14 @@ class Seq_scan : public Operator {
     access_methods::Access_methods::heap_scan heap_scan;
     std::vector<size_t> &data_size_arr;
     std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> &col_types;
+    schema::tables_attrs table_attr;
     // specifies this is the last op
 
   public:
-    Seq_scan(schema::tables_attrs &tn, access_methods::Access_methods &access_methods, buffer_manager::buffer_pool &buff_pool,
+    Seq_scan(const schema::tables_attrs tn, access_methods::Access_methods &access_methods, buffer_manager::buffer_pool &buff_pool,
              std::vector<size_t> &data_size_arr, std::vector<access_methods_types::SUPORTED_COLUMN_TYPE> &col_types)
-        : am(access_methods), buff_pool(buff_pool), heap_scan(buff_pool), data_size_arr(data_size_arr), col_types(col_types), Operator(tn) {
-    }
+        : table_attr(tn), am(access_methods), buff_pool(buff_pool), heap_scan(buff_pool), data_size_arr(data_size_arr),
+          col_types(col_types) {}
 
     void init() override {}
 
@@ -67,7 +66,10 @@ class Filter : public Operator {
   protected:
     parser_types::Predicate &predicate;
     size_t search_column = 0;
-    access_methods_types::SARG parse_predicate() {
+    access_methods_types::SUPORTED_COLUMN_TYPE col_type;
+    schema::tables_attrs table_attr;
+
+    access_methods_types::SARG parse_predicate(const access_methods_types::SUPORTED_COLUMN_TYPE &col_type) {
         access_methods_types::SARG ret_sarg;
         try {
             if (predicate.op == "==") {
@@ -82,7 +84,7 @@ class Filter : public Operator {
                 ret_sarg.op = access_methods_types::LS;
             }
             ret_sarg.col = predicate.col;
-            ret_sarg.constant = std::stoi(predicate.value);
+            ret_sarg.constant = convert_correct_type(predicate.value, col_type);
             return ret_sarg;
         } catch (...) {
             throw;
@@ -90,53 +92,61 @@ class Filter : public Operator {
     };
     access_methods_types::SARG to_match;
     std::optional<bool> match_sarg(std::optional<access_methods_types::row_t> res_row, size_t row_no) {
+        if (!res_row.has_value())
+            return std::nullopt;
+
         switch (to_match.op) {
         case access_methods_types::EQ:
-            return (to_match.constant == res_row.value().row[row_no]);
+            return (res_row.value().row[row_no] == to_match.constant);
         case access_methods_types::GT:
-            return (to_match.constant < res_row.value().row[row_no]);
+            return (res_row.value().row[row_no] > to_match.constant);
         case access_methods_types::GTE:
-            return (to_match.constant <= res_row.value().row[row_no]);
-        case access_methods_types::LS:
-            return (to_match.constant > res_row.value().row[row_no]);
-        case access_methods_types::LSE:
-            return (to_match.constant >= res_row.value().row[row_no]);
+            return (res_row.value().row[row_no] >= to_match.constant);
+        case access_methods_types::LS: // Data is Less Than Constant
+            return (res_row.value().row[row_no] < to_match.constant);
+        case access_methods_types::LSE: // Data is Less Than or Equal to Constant
+            return (res_row.value().row[row_no] <= to_match.constant);
+        default:
+            return false;
         }
-        return std::nullopt;
     }
     Operator &next_op;
 
   public:
-    Filter(schema::tables_attrs &tn, Operator &op, parser_types::Predicate &predicate) : next_op(op), predicate(predicate), Operator(tn){};
+    Filter(const schema::tables_attrs tn, Operator &op, parser_types::Predicate &predicate)
+        : next_op(op), predicate(predicate), table_attr(tn){};
     void init() override {
-        to_match = parse_predicate();
-        for (int i = 0; i < table_name.columns.size(); i++) {
-            if (table_name.columns[i].column_name == to_match.col) {
+        bool found = false;
+        for (int i = 0; i < table_attr.columns.size(); i++) {
+            if (table_attr.columns[i].column_name == predicate.col) {
                 search_column = i;
+                col_type = table_attr.columns[i].column_type;
+                found = true;
+                break;
             }
         }
+        if (!found)
+            throw std::runtime_error("Column not found");
+        to_match = parse_predicate(col_type);
     };
 
     access_methods_types::ScanResult next() override {
         /* Checks SARGs */
-        access_methods_types::ScanResult res_row = this->next_op.next();
 
         while (true) {
+            access_methods_types::ScanResult res_row = this->next_op.next();
             if (res_row.scan_status == access_methods_types::EOP) {
-                // res_row = this->next_op.next();
                 return {access_methods_types::EOPs, std::nullopt};
             } else if (res_row.scan_status == access_methods_types::EOPs) {
                 return {access_methods_types::EOPs, std::nullopt};
             } else if (res_row.scan_status == access_methods_types::ERR) {
                 return {access_methods_types::ERR, std::nullopt};
             }
-
-            if (match_sarg(res_row.scan_result.value(), search_column) && res_row.scan_result.has_value()) {
-                break;
+            if (res_row.scan_result.has_value() && match_sarg(res_row.scan_result.value(), search_column).value()) {
+                return res_row;
             }
             res_row = this->next_op.next();
         }
-        return res_row;
     };
 
     void close() override {}
@@ -146,9 +156,10 @@ class Projection : public Operator {
   protected:
     Operator &next_op;
     parser_types::SELECT_AST &ast;
+    schema::tables_attrs table_attr;
 
   public:
-    Projection(schema::tables_attrs tn, Operator &op, parser_types::SELECT_AST &ast) : next_op(op), ast(ast), Operator(tn) {}
+    Projection(schema::tables_attrs tn, Operator &op, parser_types::SELECT_AST &ast) : next_op(op), ast(ast), table_attr(tn) {}
 
     void init() override {};
     access_methods_types::ScanResult next() override {
@@ -179,7 +190,7 @@ class Insert : public Operator {
   public:
     Insert(schema::tables_attrs &tn, Operator *next_op, parser_types::INSERT_AST &ast, access_methods::Access_methods &am,
            buffer_manager::buffer_pool &buff_pool, index_write::root_struct &curr_root)
-        : next_op(next_op), ast(ast), am(am), buff_pool(buff_pool), curr_root(curr_root), Operator(tn){};
+        : next_op(next_op), ast(ast), am(am), buff_pool(buff_pool), curr_root(curr_root){};
 
     void init() override {}
 

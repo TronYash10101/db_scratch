@@ -4,4 +4,5 @@ index.bin
 gist_control/
 build/
 notes/
+**/**/core
 **/**/\\

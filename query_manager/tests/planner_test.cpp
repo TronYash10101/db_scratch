@@ -23,6 +23,7 @@ int main() {
     file3.close();
     buffer_manager::buffer_pool buff_pool(index_filepath, heap_filepath);
     access_methods::Access_methods access_methods;
+    schema::schema_manager sch_ma(schema_filepath);
 
     {
         std::string schema_name = "abc";
@@ -37,7 +38,6 @@ int main() {
 
         std::vector<std::unique_ptr<planner::Operator>> insert_operators;
 
-        schema::schema_manager sch_ma(schema_filepath);
         parser::Parser Parser;
 
         // ---------------- SCHEMA ----------------
@@ -72,33 +72,37 @@ int main() {
     }
 
     {
-        std::string select_query = "SELECT age FROM test WHERE age >= 5";
+        std::string select_query = "SELECT age FROM test WHERE age > 5";
 
         parser::token_iterator select_tok_it(select_query);
         std::vector<std::unique_ptr<planner::Operator>> select_operators;
         parser::Parser Parser;
-        schema::schema_manager sch_ma(schema_filepath);
 
         std::string schema_n = "abc";
 
         parser_types::ASTResult select_res_ast = Parser.grammer_check(select_tok_it, sch_ma, schema_n);
         if (auto select_ast = std::get_if<parser_types::SELECT_AST>(&select_res_ast)) {
             std::vector<access_methods_types::row_t> r = planner::select_plan(buff_pool, access_methods, sch_ma, *select_ast, schema_n);
+            std::cout << "\nOUTPUT: \n";
             if (r.size() == 0) {
                 std::cout << "no row found";
             } else {
                 for (const access_methods_types::row_t &ele : r) {
                     for (const auto &row : ele.row) {
                         if (const int *val = std::get_if<int>(&row)) {
+                            std::cout << "INTEGER VALUE: \n";
                             std::cout << *val;
                         } else if (const std::string *val = std::get_if<std::string>(&row)) {
+                            std::cout << "STRING VALUE: \n";
                             std::cout << *val;
                         } else if (const float *val = std::get_if<float>(&row)) {
+                            std::cout << "FLOAT VALUE: \n";
                             std::cout << *val;
                         }
                     }
                 }
             }
+            std::cout << "\n";
         }
     }
 }
