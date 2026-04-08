@@ -13,6 +13,12 @@ heap_page_types::Slot heap_writer::heap_write(char *raw_heap_page, const access_
 
     heap_page_types::HeapPage *heap_page = reinterpret_cast<heap_page_types::HeapPage *>(raw_heap_page);
 
+    /* std::cout << "WRITING VALUES: \n";
+    for (const auto &ele : row.row) {
+        std::visit([](auto &&val) { std::cout << val; }, ele);
+    }
+    std::cout << "\n"; */
+
     if (heap_page->page_header.is_initialized == false) {
         std::cout << "INITIALIZED PAGE";
         heap_page->initialize();
@@ -41,22 +47,23 @@ heap_page_types::Slot heap_writer::heap_write(char *raw_heap_page, const access_
 
     // Data fill
     size_t cum_offset = 0;
+    char *start = heap_page->data + heap_page->slots[heap_page->page_header.slot_count - 1].slot_offset;
     for (int i = 0; i < row.row.size(); i++) {
-        char *dest = heap_page->data + heap_page->slots[heap_page->page_header.slot_count - 1].slot_offset + cum_offset;
-
         std::visit(
                 [&](auto &&val) {
                     using T = std::decay_t<decltype(val)>;
 
                     if constexpr (std::is_same_v<T, int>) {
-                        memcpy(dest, &val, sizeof(int));
-                        cum_offset += row_data_size_arr[i];
+                        memcpy(start + cum_offset, &val, sizeof(int));
+                        cum_offset += sizeof(int);
                     } else if constexpr (std::is_same_v<T, float>) {
-                        memcpy(dest, &val, sizeof(float));
-                        cum_offset += row_data_size_arr[i];
+                        memcpy(start + cum_offset, &val, sizeof(float));
+                        cum_offset += sizeof(float);
                     } else if constexpr (std::is_same_v<T, std::string>) {
-                        memcpy(dest, val.c_str(), val.size());
-                        cum_offset += val.size();
+                        memcpy(start + cum_offset, val.c_str(), val.size());
+                        memset(start + cum_offset + val.size(), '\0',
+                               access_methods_types::STRING_MAX_SIZE - val.size()); // can also memset 0 whole file before writing
+                        cum_offset += access_methods_types::STRING_MAX_SIZE;
                     }
                 },
                 row.row[i]);

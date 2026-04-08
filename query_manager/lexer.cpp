@@ -52,7 +52,7 @@ void lexer::whitespace_split(const std::string &input, std::vector<lexer_types::
             curr_word.clear();
             continue;
         }
-        if (input[i] != ' ') {
+        if (input[i] != ' ' && input[i] != '\'') {
             // Insert only when there are no special characters like " "
             curr_word.push_back(input[i]);
         }

@@ -26,83 +26,73 @@ int main() {
     schema::schema_manager sch_ma(schema_filepath);
 
     {
-        std::string schema_name = "abc";
-
-        std::string create_schema = "CREATE SCHEMA abc";
-        std::string create_table = "CREATE TABLE test (age INT)";
-        std::string insert_query = "INSERT INTO test (age) VALUES (9)";
-
-        parser::token_iterator insert_tok_it(insert_query);
-        parser::token_iterator s_tok_it(create_schema);
-        parser::token_iterator t_tok_it(create_table);
-
-        std::vector<std::unique_ptr<planner::Operator>> insert_operators;
+        // 1. Define Queries
+        std::string schema_name = "school_db";
+        std::string create_schema = "CREATE SCHEMA school_db";
+        std::string create_table = "CREATE TABLE students (name STRING, grade INT)";
+        std::string insert_query1 = "INSERT INTO students (name, grade) VALUES ('Alice',3)";
+        std::string insert_query2 = "INSERT INTO students (name, grade) VALUES ('Bob',2)";
+        std::string insert_query3 = "INSERT INTO students (name, grade) VALUES ('Tim',2)";
+        std::string select_query = "SELECT name FROM students WHERE grade < 5";
 
         parser::Parser Parser;
+        index_write::root_struct curr_root;
+        curr_root.root_pid = buffer_manager_types::INVALID_PAGE_ID;
 
         // ---------------- SCHEMA ----------------
-        parser_types::ASTResult schema_res_ast = Parser.grammer_check(s_tok_it, sch_ma, schema_name);
-
-        if (auto sast = std::get_if<parser_types::SCHEMA_AST>(&schema_res_ast)) {
+        parser::token_iterator s_tok_it(create_schema);
+        parser_types::ASTResult s_ast = Parser.grammer_check(s_tok_it, sch_ma, schema_name);
+        if (auto sast = std::get_if<parser_types::SCHEMA_AST>(&s_ast)) {
             sch_ma.create_schema(*sast);
         }
 
         // ---------------- TABLE ----------------
-        parser_types::ASTResult table_res_ast = Parser.grammer_check(t_tok_it, sch_ma, schema_name);
-
-        if (auto tast = std::get_if<parser_types::CREATE_TABLE_AST>(&table_res_ast)) {
+        parser::token_iterator t_tok_it(create_table);
+        parser_types::ASTResult t_ast = Parser.grammer_check(t_tok_it, sch_ma, schema_name);
+        if (auto tast = std::get_if<parser_types::CREATE_TABLE_AST>(&t_ast)) {
             sch_ma.schema_create_table(schema_name, *tast);
         }
 
-        // ---------------- INDEX ROOT INIT ----------------
-        index_write::root_struct curr_root;
-        curr_root.root_pid = buffer_manager_types::INVALID_PAGE_ID;
-
-        // NOTE: ensure this actually allocates + initializes page
-        buffer_manager_types::Page *root_page = index_write::fetch_page(buff_pool);
-
-        // ---------------- INSERT ----------------
-        parser_types::ASTResult insert_res_ast = Parser.grammer_check(insert_tok_it, sch_ma, schema_name);
-
-        if (auto insert_ast = std::get_if<parser_types::INSERT_AST>(&insert_res_ast)) {
-
-            std::vector<access_methods_types::row_t> res =
-                    planner::insert_plan(buff_pool, access_methods, sch_ma, *insert_ast, curr_root, schema_name);
+        // ---------------- INSERT 1 (Alice) ----------------
+        parser::token_iterator i1_tok_it(insert_query1);
+        parser_types::ASTResult i1_ast = Parser.grammer_check(i1_tok_it, sch_ma, schema_name);
+        if (auto iast = std::get_if<parser_types::INSERT_AST>(&i1_ast)) {
+            planner::insert_plan(buff_pool, access_methods, sch_ma, *iast, curr_root, schema_name);
         }
-    }
 
-    {
-        std::string select_query = "SELECT age FROM test WHERE age > 5";
+        // ---------------- INSERT 2 (Bob) ----------------
+        parser::token_iterator i2_tok_it(insert_query2);
+        parser_types::ASTResult i2_ast = Parser.grammer_check(i2_tok_it, sch_ma, schema_name);
+        if (auto iast = std::get_if<parser_types::INSERT_AST>(&i2_ast)) {
+            planner::insert_plan(buff_pool, access_methods, sch_ma, *iast, curr_root, schema_name);
+        }
+        // ---------------- INSERT 2 (Tim) ----------------
+        parser::token_iterator i3_tok_it(insert_query3);
+        parser_types::ASTResult i3_ast = Parser.grammer_check(i3_tok_it, sch_ma, schema_name);
+        if (auto iast = std::get_if<parser_types::INSERT_AST>(&i3_ast)) {
+            planner::insert_plan(buff_pool, access_methods, sch_ma, *iast, curr_root, schema_name);
+        }
 
-        parser::token_iterator select_tok_it(select_query);
-        std::vector<std::unique_ptr<planner::Operator>> select_operators;
-        parser::Parser Parser;
+        // ---------------- SELECT (Where Grade = 'A') ----------------
+        parser::token_iterator sel_tok_it(select_query);
+        parser_types::ASTResult sel_ast = Parser.grammer_check(sel_tok_it, sch_ma, schema_name);
 
-        std::string schema_n = "abc";
+        if (auto sast = std::get_if<parser_types::SELECT_AST>(&sel_ast)) {
+            std::vector<access_methods_types::row_t> results = planner::select_plan(buff_pool, access_methods, sch_ma, *sast, schema_name);
 
-        parser_types::ASTResult select_res_ast = Parser.grammer_check(select_tok_it, sch_ma, schema_n);
-        if (auto select_ast = std::get_if<parser_types::SELECT_AST>(&select_res_ast)) {
-            std::vector<access_methods_types::row_t> r = planner::select_plan(buff_pool, access_methods, sch_ma, *select_ast, schema_n);
-            std::cout << "\nOUTPUT: \n";
-            if (r.size() == 0) {
-                std::cout << "no row found";
+            std::cout << "\n--- SELECT RESULTS ---" << std::endl;
+            if (results.empty()) {
+                std::cout << "No rows found." << std::endl;
             } else {
-                for (const access_methods_types::row_t &ele : r) {
-                    for (const auto &row : ele.row) {
-                        if (const int *val = std::get_if<int>(&row)) {
-                            std::cout << "INTEGER VALUE: \n";
-                            std::cout << *val;
-                        } else if (const std::string *val = std::get_if<std::string>(&row)) {
-                            std::cout << "STRING VALUE: \n";
-                            std::cout << *val;
-                        } else if (const float *val = std::get_if<float>(&row)) {
-                            std::cout << "FLOAT VALUE: \n";
-                            std::cout << *val;
-                        }
+
+                for (const auto &row_container : results) {
+                    for (const auto &col_variant : row_container.row) {
+                        // Visitor style printing
+                        std::visit([](auto &&arg) { std::cout << "VALUE: " << arg << " "; }, col_variant);
                     }
+                    std::cout << std::endl;
                 }
             }
-            std::cout << "\n";
         }
     }
 }

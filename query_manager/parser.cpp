@@ -197,11 +197,9 @@ void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_t
                     if (auto *pt = std::get_if<schema::col_attrs>(&ast_col.value()[0])) {
                         if (pt->col_type_match(pt->column_type, sub_tok.token_value)) {
                             if (auto *t_pt = std::get_if<schema::tables_attrs>(&ast_table.value()[0])) {
-                                this_row.row.resize(t_pt->columns.size());
                                 for (int k = 0; k < t_pt->columns.size(); k++) {
                                     if (pt->column_name == t_pt->columns[k].column_name) {
-
-                                        this_row.row[k] = convert_correct_type(sub_tok.token_value, pt->column_type);
+                                        this_row.row.push_back(convert_correct_type(sub_tok.token_value, pt->column_type));
                                     }
                                 }
                             }
@@ -258,6 +256,7 @@ parser_types::SCHEMA_AST parser::Parser::parse_cschema_clause(parser::token_iter
     ast.schmea_name = schema_name.token_value;
     return ast;
 }
+
 parser_types::CREATE_TABLE_AST parser::Parser::parse_ctable_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
                                                                    std::string &schema_name) {
 
@@ -280,18 +279,14 @@ parser_types::CREATE_TABLE_AST parser::Parser::parse_ctable_clause(parser::token
     }
 
     int col = 0;
-
     next_tok = tok_it.get_next();
 
-    ast.columns.resize(1);
     while (true) {
+        ast.columns.resize(col + 1);
+
         if (next_tok.token_type != lexer_types::IDENT) {
             throw std::runtime_error("EXPECTED COLUMN NAME");
         }
-        /* std::cout << ast.columns.size();
-        if (col >= ast.columns.size()) {
-            throw std::runtime_error("TOO MANY COLUMNS");
-        } */
 
         ast.columns[col].column_name = next_tok.token_value;
 
@@ -307,8 +302,6 @@ parser_types::CREATE_TABLE_AST parser::Parser::parse_ctable_clause(parser::token
             throw std::runtime_error("INVALID COLUMN TYPE");
         }
 
-        col++;
-
         next_tok = tok_it.get_next();
 
         if (next_tok.token_value == ")") {
@@ -320,6 +313,7 @@ parser_types::CREATE_TABLE_AST parser::Parser::parse_ctable_clause(parser::token
         }
 
         next_tok = tok_it.get_next();
+        col++;
     }
 
     return ast;

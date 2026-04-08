@@ -54,8 +54,9 @@ int main() {
     } */
 
     {
-        std::string create_table = "SELECT age FROM test WHERE age == 10";
-        std::vector<lexer_types::Token> toks = lexer::lexer(create_table);
+        // std::string create_table = "SELECT age FROM test WHERE age == 10";
+        std::string insert_query1 = "INSERT INTO students (name, grade) VALUES ('Alice', 'A')";
+        std::vector<lexer_types::Token> toks = lexer::lexer(insert_query1);
         for (const lexer_types::Token &tok : toks) {
             std::cout << tok.token_type << " | " << tok.token_value << "\n";
         }

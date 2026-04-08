@@ -56,7 +56,7 @@ class Seq_scan : public Operator {
         } else if (res.scan_status == access_methods_types::EOPs) {
             return {access_methods_types::EOPs, std::nullopt};
         }
-        return {access_methods_types::SUCCESS, res.scan_result};
+        return {access_methods_types::SUCCESS, res.scan_result.value()};
     }
 
     void close() override {}
@@ -145,7 +145,6 @@ class Filter : public Operator {
             if (res_row.scan_result.has_value() && match_sarg(res_row.scan_result.value(), search_column).value()) {
                 return res_row;
             }
-            res_row = this->next_op.next();
         }
     };
 
@@ -181,6 +180,7 @@ class Projection : public Operator {
 class Insert : public Operator {
   private:
     Operator *next_op;
+    std::vector<size_t> data_size_arr;
     parser_types::INSERT_AST &ast;
     access_methods::Access_methods &am;
     buffer_manager::buffer_pool &buff_pool;
@@ -189,15 +189,15 @@ class Insert : public Operator {
 
   public:
     Insert(schema::tables_attrs &tn, Operator *next_op, parser_types::INSERT_AST &ast, access_methods::Access_methods &am,
-           buffer_manager::buffer_pool &buff_pool, index_write::root_struct &curr_root)
-        : next_op(next_op), ast(ast), am(am), buff_pool(buff_pool), curr_root(curr_root){};
+           buffer_manager::buffer_pool &buff_pool, index_write::root_struct &curr_root, std::vector<size_t> data_size_arr)
+        : next_op(next_op), ast(ast), am(am), buff_pool(buff_pool), curr_root(curr_root), data_size_arr(data_size_arr){};
 
     void init() override {}
 
     access_methods_types::ScanResult next() override {
         access_methods_types::row_t inserted_row;
         if (curr_row < ast.values.size()) {
-            if (auto v = insert::create_entry(buff_pool, am, ast.values[curr_row], &curr_root)) {
+            if (auto v = insert::create_entry(buff_pool, am, ast.values[curr_row], data_size_arr, &curr_root, false)) {
                 // curr_root.root_pid = v.value(); // returns nullopt if index is not set
             }
             curr_row++;

@@ -80,7 +80,21 @@ std::vector<access_methods_types::row_t> planner::insert_plan(buffer_manager::bu
             throw std::runtime_error("ERROR AT GETTING TABLE NAME FOR PLANNER");
         }
     }
-    auto insert = std::make_unique<Insert>(*table_ptr, nullptr, ast, access_methods, buff_pool, curr_root);
+    std::vector<size_t> data_size_arr;
+    for (const auto &ele : table_ptr->columns) {
+        switch (ele.column_type) {
+        case access_methods_types::STRING:
+            data_size_arr.push_back(access_methods_types::STRING_MAX_SIZE);
+            break;
+        case access_methods_types::INTEGER:
+            data_size_arr.push_back(sizeof(int));
+            break;
+        case access_methods_types::FLOATING:
+            data_size_arr.push_back(sizeof(float));
+            break;
+        }
+    }
+    auto insert = std::make_unique<Insert>(*table_ptr, nullptr, ast, access_methods, buff_pool, curr_root, data_size_arr);
 
     access_methods_types::ScanResult row = insert->next();
     while (true) {

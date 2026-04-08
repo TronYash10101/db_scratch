@@ -1,18 +1,17 @@
 #include "headers/insert.hpp"
 #include <iostream>
 #include <optional>
+#include <variant>
 #include <vector>
 
 std::optional<heap_page_types::page_id> insert::create_entry(buffer_manager::buffer_pool &buff_pool,
                                                              access_methods::Access_methods &access_methods,
-                                                             const access_methods_types::row_t &row, index_write::root_struct *curr_root,
-                                                             bool use_index) {
+                                                             const access_methods_types::row_t &row, std::vector<size_t> row_data_sizes,
+                                                             index_write::root_struct *curr_root, bool use_index) {
 
     uintmax_t last_heap_pid = buff_pool.get_last_pid(diskoperator_types::HEAP_PAGE);
 
     buffer_manager_types::Page *raw_heap_page = buff_pool.page_access(last_heap_pid, diskoperator_types::HEAP_PAGE);
-
-    std::vector<size_t> row_data_sizes;
 
     for (const auto &ele : row.row) {
         row_data_sizes.push_back(sizeof(ele));
