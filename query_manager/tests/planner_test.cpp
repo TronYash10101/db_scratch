@@ -29,11 +29,11 @@ int main() {
         // 1. Define Queries
         std::string schema_name = "school_db";
         std::string create_schema = "CREATE SCHEMA school_db";
-        std::string create_table = "CREATE TABLE students (name STRING, grade INT)";
-        std::string insert_query1 = "INSERT INTO students (name, grade) VALUES ('Alice',3)";
-        std::string insert_query2 = "INSERT INTO students (name, grade) VALUES ('Bob',2)";
-        std::string insert_query3 = "INSERT INTO students (name, grade) VALUES ('Tim',2)";
-        std::string select_query = "SELECT name FROM students WHERE grade < 5";
+        std::string create_table = "CREATE TABLE students (name STRING, grade FLOAT)";
+        std::string insert_query1 = "INSERT INTO students (name, grade) VALUES ('Alice',3.1)";
+        std::string insert_query2 = "INSERT INTO students (name, grade) VALUES ('Bob',2.2)";
+        std::string insert_query3 = "INSERT INTO students (name, grade) VALUES ('Tim',2.5)";
+        std::string select_query = "SELECT * FROM students WHERE grade < 5";
 
         parser::Parser Parser;
         index_write::root_struct curr_root;

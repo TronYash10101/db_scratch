@@ -155,15 +155,27 @@ class Projection : public Operator {
   protected:
     Operator &next_op;
     parser_types::SELECT_AST &ast;
+    std::vector<int> original_idx;
     schema::tables_attrs table_attr;
 
   public:
     Projection(schema::tables_attrs tn, Operator &op, parser_types::SELECT_AST &ast) : next_op(op), ast(ast), table_attr(tn) {}
 
-    void init() override {};
+    void init() override {
+        for (const std::string &to_project_col : ast.cols_name) {
+            for (int i = 0; i < table_attr.columns.size(); i++) {
+                if (table_attr.columns[i].column_name == to_project_col) {
+                    original_idx.push_back(i);
+                }
+            }
+        }
+    };
+
     access_methods_types::ScanResult next() override {
-        // *input.end()->table_name internally used here, fetch this table check valid columns iterate
+
+        access_methods_types::row_t projected_row;
         access_methods_types::ScanResult res_row = this->next_op.next();
+
         if (res_row.scan_status == access_methods_types::EOP) {
             return {access_methods_types::EOP, std::nullopt};
         } else if (res_row.scan_status == access_methods_types::EOPs) {
@@ -171,8 +183,11 @@ class Projection : public Operator {
         } else if (res_row.scan_status == access_methods_types::ERR) {
             return {access_methods_types::ERR, std::nullopt};
         }
+        for (const int &idx : original_idx) {
+            projected_row.row.push_back(res_row.scan_result.value().row[idx]);
+        }
 
-        return res_row;
+        return {access_methods_types::SUCCESS, projected_row};
     }
     void close() override {}
 };

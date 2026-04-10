@@ -141,10 +141,9 @@ void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_ty
                                        schema::schema_manager &schema_manager, std::string &schema_name) {
     lexer_types::Token sub_tok = tok_it.get_next();
     // Support columns
-
+    std::optional<std::vector<schema::ENTITY_TYPE>> table_match;
     if (sub_tok.token_type == lexer_types::IDENT) {
-        std::optional<std::vector<schema::ENTITY_TYPE>> table_match =
-                schema_manager.entity_find(schema::TABLE, sub_tok.token_value, schema_name);
+        table_match = schema_manager.entity_find(schema::TABLE, sub_tok.token_value, schema_name);
 
         if (table_match.has_value()) {
             ast.table_name = sub_tok.token_value;
@@ -158,13 +157,13 @@ void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_ty
     lexer_types::Token next_tok = tok_it.peek(1);
 
     // handle the case where order of columns is not given in which case default schema has to be followed
+
     if (next_tok.token_value == "(" && next_tok.token_type == lexer_types::OPERATOR) {
         sub_tok = tok_it.get_next();
         while (sub_tok.token_value != ")") {
+            std::optional<std::vector<schema::ENTITY_TYPE>> find =
+                    schema_manager.entity_find(schema::COLUMN, sub_tok.token_value, ast.table_name, schema_name);
             if (sub_tok.token_type == lexer_types::IDENT) {
-                std::optional<std::vector<schema::ENTITY_TYPE>> find =
-                        schema_manager.entity_find(schema::COLUMN, sub_tok.token_value, ast.table_name, schema_name);
-
                 if (find.has_value()) {
                     ast.cols_name.push_back(sub_tok.token_value);
                 } else {
@@ -172,6 +171,15 @@ void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_ty
                 }
             }
             sub_tok = tok_it.get_next();
+        }
+    } else {
+        if (table_match.has_value()) {
+            if (schema::tables_attrs *table_ptr = std::get_if<schema::tables_attrs>(&table_match.value()[0])) {
+                std::vector<schema::col_attrs> schema_cols = table_ptr->columns;
+                for (const schema::col_attrs &col : schema_cols) {
+                    ast.cols_name.push_back(col.column_name);
+                }
+            }
         }
     }
 }
