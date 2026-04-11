@@ -1,11 +1,27 @@
 #include "headers/renderer.hpp"
-#include <algorithm>
-#include <cstddef>
-#include <cstdio>
-#include <cstring>
-#include <stdexcept>
-#include <unistd.h>
-#include <variant>
+
+std::optional<Renderer::mouseEvent> mouse_coords(const std::string &s) {
+    if (s.size() < 6 || s.compare(0, 3, "\033[<") != 0)
+        return std::nullopt;
+
+    Renderer::mouseEvent ev;
+    int btn;
+    char type;
+
+    if (sscanf(s.c_str(), "\033[<%d;%d;%d%c", &btn, &ev.x, &ev.y, &type) != 4)
+        return std::nullopt;
+
+    if (btn == 0)
+        ev.which_click = Renderer::LEFT;
+    else if (btn == 1)
+        ev.which_click = Renderer::MIDDLE;
+    else
+        ev.which_click = Renderer::RIGHT;
+
+    ev.mouse_status = (type == 'M') ? Renderer::CLICKED : Renderer::RELEASED;
+
+    return ev;
+}
 
 void Renderer::Screen::Render() {
     int stdout_no = fileno(stdout);
@@ -39,7 +55,7 @@ void Renderer::Screen::Render() {
             out_buff += cell.character;
             out_buff += "\033[0m";
         }
-        out_buff += "\n";
+        out_buff += "\r\n";
     }
 
     size_t byte_written = 0;
