@@ -1,34 +1,12 @@
 #include "headers/renderer.hpp"
 
-std::optional<Renderer::mouseEvent> mouse_coords(const std::string &s) {
-    if (s.size() < 6 || s.compare(0, 3, "\033[<") != 0)
-        return std::nullopt;
-
-    Renderer::mouseEvent ev;
-    int btn;
-    char type;
-
-    if (sscanf(s.c_str(), "\033[<%d;%d;%d%c", &btn, &ev.x, &ev.y, &type) != 4)
-        return std::nullopt;
-
-    if (btn == 0)
-        ev.which_click = Renderer::LEFT;
-    else if (btn == 1)
-        ev.which_click = Renderer::MIDDLE;
-    else
-        ev.which_click = Renderer::RIGHT;
-
-    ev.mouse_status = (type == 'M') ? Renderer::CLICKED : Renderer::RELEASED;
-
-    return ev;
-}
-
 void Renderer::Screen::Render() {
     int stdout_no = fileno(stdout);
     size_t out_buff_size = (resolution.ws_row * resolution.ws_col) + 512;
     std::string out_buff;
     out_buff.resize(out_buff_size);
 
+    // later this can recieve max height to render, instead of doing full available height
     for (int r = 0; r < resolution.ws_row; r++) {
         for (int c = 0; c < resolution.ws_col; c++) {
             Cell cell = buffer[(resolution.ws_col * r) + c];
@@ -55,7 +33,11 @@ void Renderer::Screen::Render() {
             out_buff += cell.character;
             out_buff += "\033[0m";
         }
-        out_buff += "\r\n";
+        if (r != resolution.ws_row - 1) {
+            out_buff += "\r\n";
+        } else {
+            out_buff += "\r";
+        }
     }
 
     size_t byte_written = 0;

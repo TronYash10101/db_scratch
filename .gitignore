@@ -5,4 +5,5 @@ gist_control/
 build/
 notes/
 **/**/core
+**/**/**.o
 **/**/\\

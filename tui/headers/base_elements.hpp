@@ -64,23 +64,27 @@ class Box : public Element {
 class Text : public Element {
   protected:
     Style style;
-    std::string text;
+    std::string inner_text;
+    size_t max_text_width;
+    size_t view_offset;
 
   public:
-    Text(int col, int row, COLOR color, COMPONENT component, size_t font_size = 0) : style(component, color), text("") {
+    Text(int col, int row, size_t max_text_width, COLOR color, COMPONENT component, size_t font_size = 0)
+        : style(component, color), inner_text(""), max_text_width(max_text_width), view_offset(0) {
         // font size is currently not supported
         Element::col = col;
         Element::row = row;
-        Element::width = width;
-        Element::height = height;
-        text.resize(1024);
     }
+
     void draw(Renderer::Screen &screen) override {
-        for (int c = 0; c < text.size(); c++) {
-            screen.at(std::string(1, text[c]), style, row, c + col);
+        for (int c = view_offset; c < inner_text.size(); c++) {
+            if ((c % (max_text_width - 1)) == 0) {
+                ++view_offset;
+            }
+            screen.at(std::string(1, inner_text[c]), style, row, (c + col) - view_offset);
         }
     }
-    std::string get_inner_text() const { return text; }
-    void set_inner_text(std::string inner_text) { text += inner_text; }
+    std::string get_inner_text() const { return inner_text; }
+    void set_inner_text(char inner_text) { this->inner_text += inner_text; }
 };
 } // namespace Base_Element
