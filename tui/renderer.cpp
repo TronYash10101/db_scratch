@@ -4,7 +4,7 @@ void Renderer::Screen::Render() {
     int stdout_no = fileno(stdout);
     size_t out_buff_size = (resolution.ws_row * resolution.ws_col) + 512;
     std::string out_buff;
-    out_buff.resize(out_buff_size);
+    out_buff.reserve(out_buff_size);
 
     // later this can recieve max height to render, instead of doing full available height
     for (int r = 0; r < resolution.ws_row; r++) {

@@ -1,3 +1,6 @@
+#ifndef RENDERER
+#define RENDERER
+
 #include "types.hpp"
 #include <cstddef>
 #include <cstdio>
@@ -43,7 +46,7 @@ class Screen {
         raw_term.c_iflag &= ~(IXON | ICRNL);
         raw_term.c_oflag &= ~(OPOST);
 
-        raw_term.c_cc[VMIN] = 1;
+        raw_term.c_cc[VMIN] = 1; // is blocking, add poll later on STDIN
         raw_term.c_cc[VTIME] = 0;
 
         if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw_term) < 0) {
@@ -90,3 +93,5 @@ class Screen {
 };
 
 } // namespace Renderer
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef BASE_ELEMENTS
+#define BASE_ELEMENTS
+
 #include "renderer.hpp"
 #include <iostream>
 
@@ -65,10 +68,10 @@ class Text : public Element {
   protected:
     Style style;
     std::string inner_text;
-    size_t max_text_width;
-    size_t view_offset;
 
   public:
+    size_t max_text_width;
+    size_t view_offset;
     Text(int col, int row, size_t max_text_width, COLOR color, COMPONENT component, size_t font_size = 0)
         : style(component, color), inner_text(""), max_text_width(max_text_width), view_offset(0) {
         // font size is currently not supported
@@ -77,14 +80,83 @@ class Text : public Element {
     }
 
     void draw(Renderer::Screen &screen) override {
-        for (int c = view_offset; c < inner_text.size(); c++) {
-            if ((c % (max_text_width - 1)) == 0) {
-                ++view_offset;
+        size_t len = inner_text.size();
+
+        if (len > max_text_width) {
+            view_offset = len % max_text_width;
+            if (view_offset == 0) {
+                view_offset = max_text_width;
             }
-            screen.at(std::string(1, inner_text[c]), style, row, (c + col) - view_offset);
+            view_offset = len - view_offset;
+        }
+        for (size_t c = 0; c < max_text_width; c++) {
+            if (c + view_offset < len) {
+                screen.at(std::string(1, inner_text[c + view_offset]), style, row, col + c);
+            } else {
+                screen.at(" ", style, row, col);
+            }
         }
     }
     std::string get_inner_text() const { return inner_text; }
-    void set_inner_text(char inner_text) { this->inner_text += inner_text; }
+    void append_inner_text(std::string text) { inner_text += text; }
+    void set_inner_text(std::string text) { inner_text = text; }
 };
+
+class VLine : public Element {
+  protected:
+    Style style;
+
+  public:
+    VLine(int row, int col, int height, COLOR color, bool is_bold = false) {
+        Element::row = row;
+        Element::col = col;
+        Element::height = height;
+        style.color = color;
+        style.comp = LINE;
+        style.unique_prop.text.is_bold = is_bold;
+    }
+
+    void draw(Renderer::Screen &screen) {
+        for (int r = row; r < row + height; r++) {
+            for (int c = 0; c < col; c++) {
+                if (c == col - 1) {
+                    if (style.unique_prop.line.is_bold) {
+                        screen.at("┃", style, r, c);
+                    } else {
+                        screen.at("│", style, r, c);
+                    }
+                } else {
+                    screen.at(" ", style, r, c);
+                }
+            }
+        }
+    }
+};
+class HLine : public Element {
+  protected:
+    Style style;
+
+  public:
+    HLine(int row, int col, int width, COLOR color, bool is_bold = false) {
+        Element::row = row;
+        Element::col = col;
+        Element::height = height;
+        style.color = color;
+        style.comp = LINE;
+        style.unique_prop.text.is_bold = is_bold;
+    }
+
+    void draw(Renderer::Screen &screen) {
+        for (int c = 0; c < col; c++) {
+            if (style.unique_prop.line.is_bold) {
+                screen.at("━", style, row, c);
+            } else {
+                screen.at("─", style, row, c);
+            }
+        }
+    }
+};
+
 } // namespace Base_Element
+
+#endif

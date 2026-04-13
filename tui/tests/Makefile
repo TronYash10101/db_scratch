@@ -7,6 +7,8 @@ OBJ_DIR = objects
 # -------- Core sources (outside folder) --------
 CORE_SRC = \
 	../renderer.cpp \
+	../input_handler.cpp \
+	../components.cpp \
 	# ../screen.cpp
 
 CORE_OBJ = $(patsubst ../%.cpp,$(OBJ_DIR)/%.o,$(CORE_SRC))

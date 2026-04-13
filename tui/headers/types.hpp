@@ -1,5 +1,6 @@
 #include <iostream>
 #include <variant>
+#include <vector>
 
 enum COLOR {
     RED,
@@ -7,7 +8,7 @@ enum COLOR {
     BLUE,
 };
 enum BORDER_OUTLINE { PLAIN, DASHED, DOTTED };
-enum COMPONENT { TEXT, BOX };
+enum COMPONENT { TEXT, BOX, LINE };
 
 struct Style {
     COLOR color;
@@ -22,6 +23,10 @@ struct Style {
         struct Text {
             bool is_bold;
         } text;
+        struct Line {
+            bool is_bold;
+        } line;
+
     } unique_prop;
     Style() : color(RED), comp(TEXT){};
     Style(COMPONENT c, COLOR color) : comp(c), color(color) {
@@ -34,6 +39,19 @@ struct Style {
             unique_prop.box.is_bold = false;
             // BORDER_OUTLINE outline;
             break;
+        case LINE:
+            unique_prop.box.is_bold = false;
+            // BORDER_OUTLINE outline;
+            break;
         }
     }
+};
+
+enum MOUSE_BUTTON { LEFT, MIDDLE, RIGHT };
+enum MOUSE_STATUS { PRESSED, RELEASED };
+struct mouseCoords {
+    MOUSE_BUTTON mouse_btn;
+    MOUSE_STATUS mouse_status;
+    int x;
+    int y;
 };
