@@ -4,6 +4,7 @@ index.bin
 gist_control/
 build/
 notes/
+tui/tests/test_bins/
 **/**/core
 **/**/**.o
 **/**/\\

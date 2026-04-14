@@ -3,6 +3,7 @@
 
 #include "renderer.hpp"
 #include <iostream>
+#include <unistd.h>
 
 namespace Base_Element {
 class Element {
@@ -55,8 +56,6 @@ class Box : public Element {
                 for (int c = col; c < col + width; c++) {
                     if (c == col || c == (col + width) - 1) {
                         screen.at("│", style, r, c);
-                    } else {
-                        screen.at(" ", style, r, c);
                     }
                 }
             }
@@ -72,8 +71,8 @@ class Text : public Element {
   public:
     size_t max_text_width;
     size_t view_offset;
-    Text(int col, int row, size_t max_text_width, COLOR color, COMPONENT component, size_t font_size = 0)
-        : style(component, color), inner_text(""), max_text_width(max_text_width), view_offset(0) {
+    Text(int col, int row, size_t max_text_width, COLOR color, size_t font_size = 0)
+        : style(TEXT, color), inner_text(""), max_text_width(max_text_width), view_offset(0) {
         // font size is currently not supported
         Element::col = col;
         Element::row = row;
@@ -92,9 +91,9 @@ class Text : public Element {
         for (size_t c = 0; c < max_text_width; c++) {
             if (c + view_offset < len) {
                 screen.at(std::string(1, inner_text[c + view_offset]), style, row, col + c);
-            } else {
+            } /* else {
                 screen.at(" ", style, row, col);
-            }
+            } */
         }
     }
     std::string get_inner_text() const { return inner_text; }
@@ -118,16 +117,11 @@ class VLine : public Element {
 
     void draw(Renderer::Screen &screen) {
         for (int r = row; r < row + height; r++) {
-            for (int c = 0; c < col; c++) {
-                if (c == col - 1) {
-                    if (style.unique_prop.line.is_bold) {
-                        screen.at("┃", style, r, c);
-                    } else {
-                        screen.at("│", style, r, c);
-                    }
-                } else {
-                    screen.at(" ", style, r, c);
-                }
+
+            if (style.unique_prop.line.is_bold) {
+                screen.at("┃", style, r, col);
+            } else {
+                screen.at("│", style, r, col);
             }
         }
     }
@@ -140,14 +134,14 @@ class HLine : public Element {
     HLine(int row, int col, int width, COLOR color, bool is_bold = false) {
         Element::row = row;
         Element::col = col;
-        Element::height = height;
+        Element::width = width;
         style.color = color;
         style.comp = LINE;
         style.unique_prop.text.is_bold = is_bold;
     }
 
     void draw(Renderer::Screen &screen) {
-        for (int c = 0; c < col; c++) {
+        for (int c = col; c < col + width; c++) {
             if (style.unique_prop.line.is_bold) {
                 screen.at("━", style, row, c);
             } else {

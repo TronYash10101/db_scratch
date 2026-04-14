@@ -11,7 +11,7 @@ namespace InputHandlers {
 class Stdin_Handler {
   private:
     Structure &curr_structure;
-    Component *active_component;
+    Component *active_component = curr_structure.screen_components[0].get();
     int curr_state = SUPPORTS_INPUT_TEXT;
     std::string special_buff;
 

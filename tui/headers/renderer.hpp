@@ -16,7 +16,7 @@
 
 namespace Renderer {
 struct Cell {
-    std::string character;
+    std::string character = " ";
     Style cell_style;
 };
 enum ClickType { LEFT, MIDDLE, RIGHT };
