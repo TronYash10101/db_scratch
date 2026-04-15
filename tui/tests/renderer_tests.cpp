@@ -51,6 +51,10 @@ int main() {
     acc1.fill_childs("table2", 1);
     acc1.fill_childs("table3", 1);
 
+    // acc1.expand(1, true);
+    //
+    //
+
     st.screen_components.push_back(std::make_unique<Table>(table1));
     st.screen_components.push_back(std::make_unique<TextBox>(textbox1));
     st.screen_components.push_back(std::make_unique<Accordion>(acc1));
@@ -60,6 +64,7 @@ int main() {
     char in;
     write(STDOUT_FILENO, "\033[?25l", 6);
     write(STDOUT_FILENO, "\033[2J\033[H", 7);
+    write(STDOUT_FILENO, std::string(st.screen_components.size(), 1).data(), 1);
     while (1) {
         int bytes_read = read(STDIN_FILENO, &in, 1);
 

@@ -20,6 +20,7 @@ class Stdin_Handler {
     void control_byte_handle(char byte);
     void esc_byte_handle();
     void mouse_byte_handle();
+    void navigation_handle();
     void read(char byte) noexcept;
 };
 } // namespace InputHandlers

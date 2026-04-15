@@ -37,6 +37,15 @@ void InputHandlers::Stdin_Handler::control_byte_handle(char byte) {
         }
     }
 }
+void InputHandlers::Stdin_Handler::navigation_handle() {
+    int curr_entry = 0;
+    std::string formatted_string = "";
+    if (Accordion *ptr = dynamic_cast<Accordion *>(active_component)) {
+        formatted_string += "\033[33m";
+        formatted_string += ptr->entry[curr_entry].name;
+        formatted_string += "\033[0m";
+    }
+};
 
 void InputHandlers::Stdin_Handler::mouse_byte_handle() {
     int x = 0;
@@ -76,6 +85,7 @@ void InputHandlers::Stdin_Handler::mouse_byte_handle() {
                 (y >= curr_structure.screen_components[i]->component_row &&
                  y <= (curr_structure.screen_components[i]->component_row + curr_structure.screen_components[i]->component_height))) {
                 active_component = curr_structure.screen_components[i].get();
+                write(STDOUT_FILENO, "hi", 2);
                 break;
             }
         }
@@ -83,14 +93,6 @@ void InputHandlers::Stdin_Handler::mouse_byte_handle() {
 }
 
 void InputHandlers::Stdin_Handler::read(char byte) noexcept {
-
-    /* [&]() {
-        if (TextBox *ptr = dynamic_cast<TextBox *>(active_component)) {
-            write(STDOUT_FILENO, "textbox", 7);
-        } else if (Accordion *ptr = dynamic_cast<Accordion *>(active_component)) {
-            write(STDOUT_FILENO, "accordion", 9);
-        }
-    }(); */
 
     if ((byte == 7 || byte == 127 || byte == '\n' || byte == 3 || isprint(byte)) && curr_state == SUPPORTS_INPUT_TEXT) {
         control_byte_handle(byte);
@@ -127,6 +129,8 @@ void InputHandlers::Stdin_Handler::read(char byte) noexcept {
 
     if (curr_state == SUPPORTS_NAVIGATION) {
         // esc_byte_handle() later
+        special_buff += byte;
+        navigation_handle();
         curr_state = SUPPORTS_INPUT_TEXT;
         return;
     }
