@@ -5,7 +5,8 @@
 enum COLOR {
     RED,
     GREEN,
-    BLUE,
+    CYAN,
+    MAGENTA,
 };
 enum BORDER_OUTLINE { PLAIN, DASHED, DOTTED };
 enum COMPONENT { TEXT, BOX, LINE };
@@ -22,6 +23,7 @@ struct Style {
 
         struct Text {
             bool is_bold;
+            bool has_background;
         } text;
         struct Line {
             bool is_bold;

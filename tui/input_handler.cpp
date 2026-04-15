@@ -84,7 +84,14 @@ void InputHandlers::Stdin_Handler::mouse_byte_handle() {
 
 void InputHandlers::Stdin_Handler::read(char byte) noexcept {
 
-    // write(STDOUT_FILENO, "here", 4);
+    /* [&]() {
+        if (TextBox *ptr = dynamic_cast<TextBox *>(active_component)) {
+            write(STDOUT_FILENO, "textbox", 7);
+        } else if (Accordion *ptr = dynamic_cast<Accordion *>(active_component)) {
+            write(STDOUT_FILENO, "accordion", 9);
+        }
+    }(); */
+
     if ((byte == 7 || byte == 127 || byte == '\n' || byte == 3 || isprint(byte)) && curr_state == SUPPORTS_INPUT_TEXT) {
         control_byte_handle(byte);
         curr_state = SUPPORTS_INPUT_TEXT;

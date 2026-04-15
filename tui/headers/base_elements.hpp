@@ -22,7 +22,7 @@ class Box : public Element {
     Style style;
 
   public:
-    Box(int col, int row, size_t width, size_t height, COLOR color, COMPONENT component, bool is_bold = false) : style(component, color) {
+    Box(int col, int row, size_t width, size_t height, COLOR color, bool is_bold = false) : style(BOX, color) {
         Element::col = col;
         Element::row = row;
         Element::width = width;

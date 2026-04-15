@@ -8,7 +8,9 @@
 #include <istream>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 enum BEHAVIOR {
@@ -40,7 +42,7 @@ class TextBox : public Component {
     Base_Element::Box box;
     TextBox(Renderer::Screen &screen, int box_row, int box_col, size_t box_height, size_t box_width, COLOR border_color)
         : screen(screen), text(box_col + 1, box_row + (box_height / 2), box_width, border_color),
-          box(box_col, box_row, box_width, box_height, border_color, BOX) {
+          box(box_col, box_row, box_width, box_height, border_color) {
         behavior = SUPPORTS_MOUSE | SUPPORTS_INPUT_TEXT;
         component_col = box_col;
         component_row = box_row;
@@ -74,7 +76,7 @@ class Table : public Component {
     size_t gap = 0;
 
     Table(Renderer::Screen &screen, int col, int row, size_t width, size_t height, size_t divisions, size_t header_gap, COLOR color)
-        : screen(screen), box(col, row, width, height, color, BOX), header_gap(header_gap),
+        : screen(screen), box(col, row, width, height, color), header_gap(header_gap),
           header_seperator(row + header_gap, col + 1, width - 2, color), color(color), divisions(divisions), headers(divisions, " "),
           rows(divisions, std::vector<std::string>(divisions, " ")) {
         component_col = col;
@@ -101,8 +103,8 @@ class Table : public Component {
         }
         for (int row = 0; row < rows.size(); row++) {
             for (int r_value = 0; r_value < rows[row].size(); r_value++) {
-                Base_Element::Text text(component_col + gap / 3 + (r_value * gap),
-                                        component_row + (r_value + 1) * header_gap + (header_gap / 2), gap / 2, color);
+                Base_Element::Text text(component_col + 2 + (r_value * gap),
+                                        component_row + header_gap + (row * header_gap) + (header_gap / 2), gap / 2, color);
                 text.set_inner_text(rows[row][r_value]);
                 text.draw(screen);
             }
@@ -110,5 +112,48 @@ class Table : public Component {
     }
     void fill_rows(std::string value, int row, int col) { rows[row][col] = value; }
     void fill_headers(std::string value, int col) { headers[col] = value; }
+};
+
+class Accordion : public Component {
+  private:
+    struct accordion_entry {
+        std::string name;
+        std::vector<std::string> sub_childs;
+    };
+    Renderer::Screen &screen;
+
+  public:
+    std::vector<accordion_entry> entry;
+    Base_Element::Box box;
+    size_t entry_gap;
+    COLOR color;
+    int behaviour = SUPPORTS_MOUSE | SUPPORTS_NAVIGATION;
+    Accordion(Renderer::Screen &screen, int col, int row, size_t width, size_t height, size_t entry_gap, COLOR color)
+        : box(col, row, width, height, color), screen(screen), entry_gap(entry_gap), color(color) {
+        entry.resize(10, {});
+        component_col = col;
+        component_row = row;
+        component_width = width;
+        component_height = height;
+    }
+    void draw() override {
+        box.draw(screen);
+        size_t off = entry_gap;
+        for (int i = 0; i < entry.size(); i++) {
+            Base_Element::Text parent(component_col + 4, component_row + off, component_width - 4, color);
+            parent.set_inner_text(entry[i].name);
+            parent.draw(screen);
+            int k = 0;
+            while (k < entry[i].sub_childs.size()) {
+                Base_Element::Text child(component_col + 7, component_row + off + (k + 1), component_width - 7, color);
+                child.set_inner_text(entry[i].sub_childs[k]);
+                child.draw(screen);
+                k++;
+            }
+            off += (k + 1) + 1;
+        }
+    }
+    void fill_entry(std::string value, int idx) { entry[idx].name = value; }
+    void fill_childs(std::string value, int parent_idx) { entry[parent_idx].sub_childs.push_back(value); }
 };
 #endif

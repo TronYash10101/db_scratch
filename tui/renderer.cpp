@@ -17,8 +17,10 @@ void Renderer::Screen::Render() {
                 out_buff += "\033[31m";
             } else if (style.color == GREEN) {
                 out_buff += "\033[32m";
-            } else if (style.color == BLUE) {
-                out_buff += "\033[33m";
+            } else if (style.color == CYAN) {
+                out_buff += "\033[36m";
+            } else if (style.color == MAGENTA) {
+                out_buff += "\033[35m";
             }
 
             // set unique properties

@@ -11,17 +11,49 @@ int main() {
     Renderer::Screen screen;
     Structure st;
 
-    TextBox textbox1(screen, 40, 1, 3, 185, BLUE);
-    Table table1(screen, 1, 1, 185, 39, 3, 3, RED);
+    // --- TextBox (top-left)
+    TextBox textbox1(screen,
+                     37,  // row
+                     2,   // col
+                     3,   // height
+                     140, // width
+                     MAGENTA);
+
+    // --- Table (below textbox)
+    Table table1(screen,
+                 2,      // col
+                 2,      // row
+                 140,    // width
+                 38 - 3, // height
+                 3, 3, RED);
+
+    // --- Accordion (right side)
+    Accordion acc1(screen,
+                   2 + 140 + 2, // col
+                   2,           // row
+                   43,          // width
+                   38,          // height
+                   2, RED);
 
     table1.fill_headers("header 1", 0);
     table1.fill_headers("header 2", 1);
     table1.fill_headers("header 3", 2);
     table1.fill_rows("sdf", 0, 0);
     table1.fill_rows("abc", 0, 1);
+    table1.fill_rows("iqs", 1, 0);
+    table1.fill_rows("prq", 1, 1);
+    acc1.fill_entry("schema1", 0);
+    acc1.fill_entry("schema2", 1);
+    acc1.fill_childs("table1", 0);
+    acc1.fill_childs("table2", 0);
+    acc1.fill_childs("table3", 0);
+    acc1.fill_childs("table1", 1);
+    acc1.fill_childs("table2", 1);
+    acc1.fill_childs("table3", 1);
 
     st.screen_components.push_back(std::make_unique<Table>(table1));
     st.screen_components.push_back(std::make_unique<TextBox>(textbox1));
+    st.screen_components.push_back(std::make_unique<Accordion>(acc1));
 
     InputHandlers::Stdin_Handler input_handler(st);
 
