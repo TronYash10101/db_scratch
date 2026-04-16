@@ -69,12 +69,16 @@ class Screen {
     }
 
   public:
+    int max_cols;
+    int max_rows;
     Screen() {
         int stdout_no = fileno(stdout);
         if (ioctl(stdout_no, TIOCGWINSZ, &resolution) == -1 || resolution.ws_col == 0) {
             resolution.ws_row = 24;
             resolution.ws_col = 80;
         }
+        max_cols = resolution.ws_col;
+        max_rows = resolution.ws_row;
         buffer = std::make_unique<Cell[]>(resolution.ws_row * resolution.ws_col);
         if (set_raw_mode() == false) {
             throw std::runtime_error("ERROR SETTING TERMINAL IN RAW MODE");
@@ -88,6 +92,7 @@ class Screen {
         buffer[(resolution.ws_col * row) + col].cell_style = style;
     }
     void Render();
+    void reset_region(int col, int row, int width, int height, Style style);
 
     ~Screen() { reset_raw_mode(); }
 };

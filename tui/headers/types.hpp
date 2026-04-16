@@ -20,7 +20,6 @@ struct Style {
             bool is_bold;
             // BORDER_OUTLINE outline;
         } box;
-
         struct Text {
             bool is_bold;
             bool has_background;

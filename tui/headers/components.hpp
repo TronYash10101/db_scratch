@@ -2,8 +2,10 @@
 #define COMPONENTS
 
 #include "base_elements.hpp"
+#include "renderer.hpp"
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <iostream>
 #include <istream>
 #include <memory>
@@ -118,7 +120,8 @@ class Accordion : public Component {
   private:
     struct accordion_entry {
         std::string name;
-        bool is_expanded;
+        bool is_expanded = false;
+        int sub_child_selected = false;
         std::vector<std::string> sub_childs;
     };
     Renderer::Screen &screen;
@@ -127,28 +130,39 @@ class Accordion : public Component {
     std::vector<accordion_entry> entry;
     Base_Element::Box box;
     size_t entry_gap;
-    COLOR color;
+    COLOR default_color;
+    int which_selected;
+
     Accordion(Renderer::Screen &screen, int col, int row, size_t width, size_t height, size_t entry_gap, COLOR color)
-        : box(col, row, width, height, color), screen(screen), entry_gap(entry_gap), color(color) {
+        : box(col, row, width, height, color), screen(screen), entry_gap(entry_gap), default_color(color) {
         behavior = SUPPORTS_MOUSE | SUPPORTS_NAVIGATION;
         entry.resize(10, {});
         component_col = col;
         component_row = row;
         component_width = width;
         component_height = height;
+        which_selected = -1;
     }
     void draw() override {
         box.draw(screen);
         size_t off = entry_gap;
         for (int i = 0; i < entry.size(); i++) {
-            Base_Element::Text parent(component_col + 4, component_row + off, component_width - 4, color);
+            COLOR pcolor = default_color;
+            if (which_selected >= 0 && i == which_selected) {
+                pcolor = CYAN;
+            }
+            Base_Element::Text parent(component_col + 4, component_row + off, component_width - 4, pcolor);
             parent.set_inner_text(entry[i].name);
             parent.draw(screen);
             int k = 0;
             if (entry[i].is_expanded) {
                 while (k < entry[i].sub_childs.size()) {
-                    Base_Element::Text child(component_col + 7, component_row + off + (k + 1), component_width - 7, color);
-                    child.set_inner_text(entry[i].sub_childs[k]);
+                    COLOR ccolor = default_color;
+                    if (entry[i].sub_child_selected) {
+                        ccolor = MAGENTA;
+                    }
+                    Base_Element::Text child(component_col + 4, component_row + off + (k + 1), component_width - 4, ccolor);
+                    child.set_inner_text("   " + entry[i].sub_childs[k]);
                     child.draw(screen);
                     k++;
                 }
@@ -158,6 +172,5 @@ class Accordion : public Component {
     }
     void fill_entry(std::string value, int idx) { entry[idx].name = value; }
     void fill_childs(std::string value, int parent_idx) { entry[parent_idx].sub_childs.push_back(value); }
-    void expand(int idx, bool expand) { entry[idx].is_expanded = expand; }
 };
 #endif

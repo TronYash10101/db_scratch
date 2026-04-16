@@ -38,12 +38,24 @@ void InputHandlers::Stdin_Handler::control_byte_handle(char byte) {
     }
 }
 void InputHandlers::Stdin_Handler::navigation_handle() {
-    int curr_entry = 0;
-    std::string formatted_string = "";
+    char dir_key;
+
+    if (sscanf(special_buff.data(), "\033[%c", &dir_key) != 1) {
+        if (*special_buff.data() == '\n' || *special_buff.data() == '\r') {
+            dir_key = *special_buff.data();
+        }
+    }
+
     if (Accordion *ptr = dynamic_cast<Accordion *>(active_component)) {
-        formatted_string += "\033[33m";
-        formatted_string += ptr->entry[curr_entry].name;
-        formatted_string += "\033[0m";
+        if (dir_key == 'A' && ptr->which_selected != 0) {
+            ptr->which_selected -= 1;
+        } else if (dir_key == 'B' && ptr->which_selected < ptr->entry.size()) {
+            ptr->which_selected += 1;
+        } else if (ptr->which_selected < 0) {
+            ptr->which_selected = 0;
+        } else if (dir_key == '\n' || dir_key == '\r') {
+            ptr->entry[ptr->which_selected].is_expanded = !ptr->entry[ptr->which_selected].is_expanded;
+        }
     }
 };
 
@@ -85,7 +97,6 @@ void InputHandlers::Stdin_Handler::mouse_byte_handle() {
                 (y >= curr_structure.screen_components[i]->component_row &&
                  y <= (curr_structure.screen_components[i]->component_row + curr_structure.screen_components[i]->component_height))) {
                 active_component = curr_structure.screen_components[i].get();
-                write(STDOUT_FILENO, "hi", 2);
                 break;
             }
         }
@@ -93,8 +104,15 @@ void InputHandlers::Stdin_Handler::mouse_byte_handle() {
 }
 
 void InputHandlers::Stdin_Handler::read(char byte) noexcept {
+    if (byte == '\n' || byte == '\r') {
+        write(STDOUT_FILENO, "hi", 2);
+        special_buff.clear();
+        special_buff += byte;
+        navigation_handle();
+        return;
+    }
 
-    if ((byte == 7 || byte == 127 || byte == '\n' || byte == 3 || isprint(byte)) && curr_state == SUPPORTS_INPUT_TEXT) {
+    if ((byte == 7 || byte == 127 || byte == 3 || isprint(byte)) && curr_state == SUPPORTS_INPUT_TEXT) {
         control_byte_handle(byte);
         curr_state = SUPPORTS_INPUT_TEXT;
         return;
@@ -115,23 +133,17 @@ void InputHandlers::Stdin_Handler::read(char byte) noexcept {
             return;
         } else {
             curr_state = SUPPORTS_NAVIGATION;
+            navigation_handle();
             return;
         }
     }
+
     if (curr_state == SUPPORTS_MOUSE) {
         special_buff += byte;
         if (byte == 'M' || byte == 'm') {
             mouse_byte_handle();
             curr_state = SUPPORTS_INPUT_TEXT;
         }
-        return;
-    }
-
-    if (curr_state == SUPPORTS_NAVIGATION) {
-        // esc_byte_handle() later
-        special_buff += byte;
-        navigation_handle();
-        curr_state = SUPPORTS_INPUT_TEXT;
         return;
     }
 }

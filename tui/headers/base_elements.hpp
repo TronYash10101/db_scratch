@@ -19,9 +19,8 @@ class Element {
 
 class Box : public Element {
   protected:
-    Style style;
-
   public:
+    Style style;
     Box(int col, int row, size_t width, size_t height, COLOR color, bool is_bold = false) : style(BOX, color) {
         Element::col = col;
         Element::row = row;
@@ -65,10 +64,10 @@ class Box : public Element {
 
 class Text : public Element {
   protected:
-    Style style;
     std::string inner_text;
 
   public:
+    Style style;
     size_t max_text_width;
     size_t view_offset;
     Text(int col, int row, size_t max_text_width, COLOR color, size_t font_size = 0)
@@ -103,9 +102,8 @@ class Text : public Element {
 
 class VLine : public Element {
   protected:
-    Style style;
-
   public:
+    Style style;
     VLine(int row, int col, int height, COLOR color, bool is_bold = false) {
         Element::row = row;
         Element::col = col;
@@ -128,9 +126,8 @@ class VLine : public Element {
 };
 class HLine : public Element {
   protected:
-    Style style;
-
   public:
+    Style style;
     HLine(int row, int col, int width, COLOR color, bool is_bold = false) {
         Element::row = row;
         Element::col = col;

@@ -1,4 +1,5 @@
 #include "headers/renderer.hpp"
+#include <cstring>
 
 void Renderer::Screen::Render() {
     int stdout_no = fileno(stdout);
@@ -51,5 +52,13 @@ void Renderer::Screen::Render() {
         }
 
         byte_written += written;
+    }
+}
+
+void Renderer::Screen::reset_region(int col, int row, int width, int height, Style style) {
+    for (int r = 0; r < row + height; r++) {
+        for (int c = 0; c < col + width; c++) {
+            at(" ", style, r, c);
+        }
     }
 }
