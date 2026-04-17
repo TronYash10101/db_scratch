@@ -14,25 +14,16 @@ void InputHandlers::Stdin_Handler::control_byte_handle(char byte) {
         kill(getpid(), SIGINT);
     }
 
-    for (int i = 0; i < curr_structure.screen_components.size(); i++) {
-        if ((curr_structure.screen_components[i].get()->behavior & curr_state) == curr_state) {
-            if (TextBox *ptr = dynamic_cast<TextBox *>(active_component)) {
-                if (byte == 127 || byte == 7) {
-                    std::string curr_text = ptr->get_inner_text();
-                    if (curr_text.size() != 0) {
-                        curr_text.pop_back();
-                        if (!curr_text.empty()) {
-                            curr_text.pop_back();
-                            ptr->text.set_inner_text(curr_text);
-                        }
-                        ptr->text.set_inner_text(curr_text);
-                    }
-                    break;
-                } else if (byte == '\n') {
-                    ptr->text.append_inner_text(std::string(1, '\n'));
-                } else if (isprint(byte)) {
-                    ptr->text.append_inner_text(std::string(1, byte));
+    if ((active_component->behavior & curr_state) == SUPPORTS_INPUT_TEXT) {
+        if (TextBox *ptr = dynamic_cast<TextBox *>(active_component)) {
+            std::string curr_text = ptr->get_inner_text();
+            if (byte == 127 || byte == 7) {
+                if (curr_text.size() != 0) {
+                    curr_text.pop_back();
+                    ptr->text.set_inner_text(curr_text);
                 }
+            } else if (isprint(byte)) {
+                ptr->text.append_inner_text(std::string(1, byte));
             }
         }
     }
@@ -105,7 +96,6 @@ void InputHandlers::Stdin_Handler::mouse_byte_handle() {
 
 void InputHandlers::Stdin_Handler::read(char byte) noexcept {
     if (byte == '\n' || byte == '\r') {
-        write(STDOUT_FILENO, "hi", 2);
         special_buff.clear();
         special_buff += byte;
         navigation_handle();
@@ -119,6 +109,7 @@ void InputHandlers::Stdin_Handler::read(char byte) noexcept {
     }
 
     if (byte == '\033') {
+        special_buff.clear();
         curr_state = SUPPORTS_NAVIGATION | SUPPORTS_MOUSE;
         special_buff = byte;
         return;

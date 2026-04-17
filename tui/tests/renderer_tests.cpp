@@ -64,7 +64,9 @@ int main() {
     write(STDOUT_FILENO, "\033[2J\033[H", 7);
     write(STDOUT_FILENO, std::string(st.screen_components.size(), 1).data(), 1);
     while (1) {
+
         screen.reset_region(1, 1, screen.max_cols - 1, screen.max_rows - 1, {});
+
         int bytes_read = read(STDIN_FILENO, &in, 1);
 
         if (bytes_read <= 0)
@@ -74,8 +76,6 @@ int main() {
             break;
 
         input_handler.read(in);
-
-        // only rendering if input handler emits
 
         st.draw_structure();
         write(STDOUT_FILENO, "\033[H", 3);

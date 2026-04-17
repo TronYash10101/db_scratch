@@ -58,8 +58,8 @@ class TextBox : public Component {
     }
 
     std::string get_inner_text() const { return text.get_inner_text(); }
-    // void append_inner_text(std::string inner_text) { text.append_inner_text(inner_text); }
-    // void set_inner_text(std::string inner_text) { text.set_inner_text(inner_text); }
+    void append_inner_text(std::string inner_text) { text.append_inner_text(inner_text); }
+    void set_inner_text(std::string inner_text) { text.set_inner_text(inner_text); }
 };
 
 class Table : public Component {
