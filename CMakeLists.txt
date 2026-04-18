@@ -5,18 +5,28 @@ set(CMAKE_BUILD_TYPE Debug)
 # 1. Define the executable with ALL .cpp files
 add_executable(db_scratch
     daemon.cpp
-    storage_manager/buffer_manager.cpp
-    storage_manager/disk_operator.cpp
-    storage_manager/access_methods.cpp
-    storage_manager/heap_writer.cpp
-    storage_manager/index_writer.cpp
-    storage_manager/insert.cpp
+    src/storage_manager/access_methods.cpp
+    src/storage_manager/buffer_manager.cpp
+    src/storage_manager/disk_operator.cpp
+    src/storage_manager/heap_writer.cpp
+    src/storage_manager/index_writer.cpp
+    src/storage_manager/insert.cpp
+    src/query_manager/lexer.cpp
+    src/query_manager/parser.cpp
+    src/query_manager/planner.cpp
+    src/catalog_manager/schema_manager.cpp
+    tui/base_elements.cpp
+    tui/components.cpp
+    tui/input_handler.cpp
+    tui/renderer.cpp
 )
 
-# 2. Tell CMake where to find header files
+# 2. Tell CMake where ao find header files
 target_include_directories(db_scratch PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/storage_manager/headers
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/storage_manager/headers
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/query_manager/headers
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/catalog_manager/headers
 )
 
 # 3. Features and Options

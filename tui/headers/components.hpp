@@ -32,6 +32,7 @@ class Component {
     int component_width;
     int component_height;
     int behavior = 0;
+    std::string component_id;
     virtual void draw() {}
 };
 
@@ -42,10 +43,11 @@ class TextBox : public Component {
   public:
     Base_Element::Text text;
     Base_Element::Box box;
-    TextBox(Renderer::Screen &screen, int box_row, int box_col, size_t box_height, size_t box_width, COLOR border_color)
+    TextBox(Renderer::Screen &screen, int box_row, int box_col, size_t box_height, size_t box_width, COLOR border_color, std::string id)
         : screen(screen), text(box_col + 1, box_row + (box_height / 2), box_width, border_color),
           box(box_col, box_row, box_width, box_height, border_color) {
         behavior = SUPPORTS_MOUSE | SUPPORTS_INPUT_TEXT;
+        component_id = id;
         component_col = box_col;
         component_row = box_row;
         component_width = box_width;
@@ -76,12 +78,14 @@ class Table : public Component {
     std::vector<std::vector<std::string>> rows;
     size_t gap = 0;
 
-    Table(Renderer::Screen &screen, int col, int row, size_t width, size_t height, size_t divisions, size_t header_gap, COLOR color)
+    Table(Renderer::Screen &screen, int col, int row, size_t width, size_t height, size_t divisions, size_t header_gap, COLOR color,
+          std::string id)
         : screen(screen), box(col, row, width, height, color), header_gap(header_gap),
           header_seperator(row + header_gap, col + 1, width - 2, color), color(color), divisions(divisions), headers(divisions, " "),
           rows(divisions, std::vector<std::string>(divisions, " ")) {
         component_col = col;
         component_row = row;
+        component_id = id;
         component_width = width;
         component_height = height;
         behavior = SUPPORTS_INPUT_TEXT | SUPPORTS_NAVIGATION;
@@ -121,7 +125,7 @@ class Accordion : public Component {
     struct accordion_entry {
         std::string name;
         bool is_expanded = false;
-        int sub_child_selected = false;
+        int sub_child_selected = 0;
         std::vector<std::string> sub_childs;
     };
     Renderer::Screen &screen;
@@ -133,15 +137,16 @@ class Accordion : public Component {
     COLOR default_color;
     int which_selected;
 
-    Accordion(Renderer::Screen &screen, int col, int row, size_t width, size_t height, size_t entry_gap, COLOR color)
+    Accordion(Renderer::Screen &screen, int col, int row, size_t width, size_t height, size_t entry_gap, COLOR color, std::string id)
         : box(col, row, width, height, color), screen(screen), entry_gap(entry_gap), default_color(color) {
         behavior = SUPPORTS_MOUSE | SUPPORTS_NAVIGATION;
+        component_id = id;
         entry.resize(10, {});
         component_col = col;
         component_row = row;
         component_width = width;
         component_height = height;
-        which_selected = -1;
+        which_selected = 0;
     }
     void draw() override {
         box.draw(screen);

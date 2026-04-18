@@ -1,6 +1,8 @@
 .envrc
 heap.bin
 index.bin
+schema_file.bin
+gdb_output.txt
 gist_control/
 build/
 notes/

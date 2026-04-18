@@ -151,25 +151,13 @@ class schema_manager {
             throw std::runtime_error("ERROR FINDING ENTITY");
         }
     };
-    void iterate_catalog() const {
-        for (const schema_attr &ele : schema_catalog) {
-            // Schema Header
-            std::cout << "========================================\n";
-            std::cout << "  SCHEMA: " << ele.schema_name << "\n";
-            std::cout << "========================================\n";
-
-            for (const tables_attrs &table : ele.tables) {
-                // Table Header (Indented)
-                std::cout << "  |-- TABLE: " << table.table_name << "\n";
-                std::cout << "  |   └-- COLUMNS:\n";
-
-                for (const col_attrs &col : table.columns) {
-                    // Column List (Double Indented)
-                    std::cout << "  |       • " << col.column_name << "\n";
-                }
-                std::cout << "  |\n"; // Spacer between tables
+    void get_schema(std::vector<schema_attr> &schemas) const {
+        for (const schema_attr &schema : schema_catalog) {
+            std::vector<tables_attrs> tb;
+            for (const tables_attrs &table : schema.tables) {
+                tb.push_back(table);
             }
-            std::cout << "\n";
+            schemas.push_back({schema.schema_name, tb});
         }
     }
 
