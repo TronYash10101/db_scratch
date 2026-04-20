@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -127,6 +128,7 @@ class Accordion : public Component {
         bool is_expanded = false;
         int sub_child_selected = 0;
         std::vector<std::string> sub_childs;
+        std::unordered_set<std::string> sub_childs_lookup;
     };
     Renderer::Screen &screen;
 
@@ -176,6 +178,9 @@ class Accordion : public Component {
         }
     }
     void fill_entry(std::string value, int idx) { entry[idx].name = value; }
-    void fill_childs(std::string value, int parent_idx) { entry[parent_idx].sub_childs.push_back(value); }
+    void fill_childs(std::string value, int parent_idx) {
+        entry[parent_idx].sub_childs.push_back(value);
+        entry[parent_idx].sub_childs_lookup.insert(value);
+    }
 };
 #endif

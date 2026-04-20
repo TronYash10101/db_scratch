@@ -85,6 +85,7 @@ parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_itera
 
         if (sub_tok.token_value == "WHERE") {
             ast.predicate = parse_where_clause(tok_it);
+            ast.have_predicate = true;
             continue;
         } else {
             while (true) {

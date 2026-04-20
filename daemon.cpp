@@ -98,7 +98,10 @@ void TUI_Pipeline(schema::schema_manager &sch_ma, parser::Parser &parser, buffer
                 for (int i = 0; i < res.schemas.value().size(); i++) {
                     st.accordion[accord_idx]->fill_entry(res.schemas.value()[i].schema_name, i);
                     for (int j = 0; j < res.schemas.value()[i].tables.size(); j++) {
-                        st.accordion[accord_idx]->fill_childs(res.schemas.value()[i].tables[j].table_name, i);
+                        if (st.accordion[accord_idx]->entry[i].sub_childs_lookup.find(res.schemas.value()[i].tables[j].table_name) ==
+                            st.accordion[accord_idx]->entry[i].sub_childs_lookup.end()) {
+                            st.accordion[accord_idx]->fill_childs(res.schemas.value()[i].tables[j].table_name, i);
+                        }
                     }
                 }
                 break;
@@ -131,7 +134,6 @@ void TUI_Pipeline(schema::schema_manager &sch_ma, parser::Parser &parser, buffer
         }
 
         for (int r = 0; r < res.results.value().size(); r++) {
-            write(STDOUT_FILENO, "hi", 2);
             for (int v = 0; v < res.results.value()[r].row.size(); v++) {
                 std::visit(
                         [&](auto &&val) {

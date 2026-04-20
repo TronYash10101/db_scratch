@@ -111,28 +111,32 @@ class Filter : public Operator {
         }
     }
     Operator &next_op;
+    bool have_predicate;
 
   public:
-    Filter(const schema::tables_attrs tn, Operator &op, parser_types::Predicate &predicate)
-        : next_op(op), predicate(predicate), table_attr(tn){};
+    Filter(const schema::tables_attrs tn, Operator &op, bool have_predicate, parser_types::Predicate &predicate)
+        : next_op(op), predicate(predicate), table_attr(tn), have_predicate(have_predicate){};
     void init() override {
-        bool found = false;
-        for (int i = 0; i < table_attr.columns.size(); i++) {
-            if (table_attr.columns[i].column_name == predicate.col) {
-                search_column = i;
-                col_type = table_attr.columns[i].column_type;
-                found = true;
-                break;
+        if (have_predicate) {
+
+            bool found = false;
+            for (int i = 0; i < table_attr.columns.size(); i++) {
+                if (table_attr.columns[i].column_name == predicate.col) {
+                    search_column = i;
+                    col_type = table_attr.columns[i].column_type;
+                    found = true;
+                    break;
+                }
             }
+            if (!found)
+                throw std::runtime_error("Column not found");
+
+            to_match = parse_predicate(col_type);
         }
-        if (!found)
-            throw std::runtime_error("Column not found");
-        to_match = parse_predicate(col_type);
     };
 
     access_methods_types::ScanResult next() override {
         /* Checks SARGs */
-
         while (true) {
             access_methods_types::ScanResult res_row = this->next_op.next();
             if (res_row.scan_status == access_methods_types::EOP) {
@@ -142,8 +146,13 @@ class Filter : public Operator {
             } else if (res_row.scan_status == access_methods_types::ERR) {
                 return {access_methods_types::ERR, std::nullopt};
             }
-            if (res_row.scan_result.has_value() && match_sarg(res_row.scan_result.value(), search_column).value()) {
-                return res_row;
+            if (res_row.scan_result.has_value()) {
+                if (have_predicate && match_sarg(res_row.scan_result.value(), search_column).value()) {
+                    return res_row;
+                }
+                if (!have_predicate) {
+                    return res_row;
+                }
             }
         }
     };

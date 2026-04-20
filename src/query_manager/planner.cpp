@@ -44,7 +44,7 @@ std::vector<access_methods_types::row_t> planner::select_plan(buffer_manager::bu
     }
     auto seq_scan = std::make_unique<Seq_scan>(*table_ptr, access_methods, buff_pool, data_size_arr, col_types);
     seq_scan->init();
-    auto filter = std::make_unique<Filter>(*table_ptr, *seq_scan, ast.predicate);
+    auto filter = std::make_unique<Filter>(*table_ptr, *seq_scan, ast.have_predicate, ast.predicate);
     filter->init();
     auto project = std::make_unique<Projection>(*table_ptr, *filter, ast);
     project->init();

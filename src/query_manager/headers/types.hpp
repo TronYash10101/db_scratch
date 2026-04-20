@@ -37,6 +37,7 @@ struct SELECT_AST {
     std::vector<std::string> cols_name;
     std::string table_name;
     Predicate predicate;
+    bool have_predicate = false;
 };
 
 struct INSERT_AST {

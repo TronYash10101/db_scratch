@@ -31,9 +31,9 @@ int main() {
         std::string create_schema = "CREATE SCHEMA abc";
         std::string create_table = "CREATE TABLE t1 (name STRING)";
         std::string insert_query1 = "INSERT INTO t1 VALUES ('Alice')";
-        // std::string insert_query2 = "INSERT INTO students (name, grade) VALUES ('Bob',2.2)";
+        std::string insert_query2 = "INSERT INTO t1 (name) VALUES ('Bob')";
         // std::string insert_query3 = "INSERT INTO students (name, grade) VALUES ('Tim',2.5)";
-        std::string select_query = "SELECT name FROM t1 WHERE name == Alice";
+        std::string select_query = "SELECT name FROM t1";
 
         parser::Parser Parser;
         index_write::root_struct curr_root;
@@ -60,18 +60,18 @@ int main() {
             planner::insert_plan(buff_pool, access_methods, sch_ma, *iast, curr_root, schema_name);
         }
 
-        /*         // ---------------- INSERT 2 (Bob) ----------------
-                parser::token_iterator i2_tok_it(insert_query2);
-                parser_types::ASTResult i2_ast = Parser.grammer_check(i2_tok_it, sch_ma, schema_name);
-                if (auto iast = std::get_if<parser_types::INSERT_AST>(&i2_ast)) {
-                    planner::insert_plan(buff_pool, access_methods, sch_ma, *iast, curr_root, schema_name);
-                }
-                // ---------------- INSERT 2 (Tim) ----------------
-                parser::token_iterator i3_tok_it(insert_query3);
-                parser_types::ASTResult i3_ast = Parser.grammer_check(i3_tok_it, sch_ma, schema_name);
-                if (auto iast = std::get_if<parser_types::INSERT_AST>(&i3_ast)) {
-                    planner::insert_plan(buff_pool, access_methods, sch_ma, *iast, curr_root, schema_name);
-                } */
+        // ---------------- INSERT 2 (Bob) ----------------
+        parser::token_iterator i2_tok_it(insert_query2);
+        parser_types::ASTResult i2_ast = Parser.grammer_check(i2_tok_it, sch_ma, schema_name);
+        if (auto iast = std::get_if<parser_types::INSERT_AST>(&i2_ast)) {
+            planner::insert_plan(buff_pool, access_methods, sch_ma, *iast, curr_root, schema_name);
+        }
+        /*                 // ---------------- INSERT 2 (Tim) ----------------
+                        parser::token_iterator i3_tok_it(insert_query3);
+                        parser_types::ASTResult i3_ast = Parser.grammer_check(i3_tok_it, sch_ma, schema_name);
+                        if (auto iast = std::get_if<parser_types::INSERT_AST>(&i3_ast)) {
+                            planner::insert_plan(buff_pool, access_methods, sch_ma, *iast, curr_root, schema_name);
+                        } */
 
         // ---------------- SELECT (Where Grade = 'A') ----------------
         parser::token_iterator sel_tok_it(select_query);
