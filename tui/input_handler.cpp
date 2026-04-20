@@ -19,7 +19,7 @@ void InputHandlers::Stdin_Handler::control_byte_handle(char byte, Events &events
                 }
             } else if (isprint(byte)) {
                 ptr->text.append_inner_text(std::string(1, byte));
-            } else if (byte == '\n' && byte == '\r') {
+            } else if (byte == '\n' || byte == '\r') {
                 events.SUBMIT = true;
             }
         }

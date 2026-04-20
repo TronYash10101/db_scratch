@@ -31,8 +31,7 @@ struct Response {
 Response DB_Pipeline(std::string schema_name, schema::schema_manager &sch_ma, parser::Parser &parser,
                      buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods, Request &input) {
 
-    Response response_obj;
-    response_obj = Response{};
+    Response response_obj = {};
     index_write::root_struct curr_root = {};
 
     parser::token_iterator tok_it(input.text_box_input);
@@ -59,10 +58,10 @@ Response DB_Pipeline(std::string schema_name, schema::schema_manager &sch_ma, pa
 
     } else if (parser_types::SELECT_AST *select_ast = std::get_if<parser_types::SELECT_AST>(&ast)) {
         if (schema_name != "") {
-            std::vector<access_methods_types::row_t> results =
-                    planner::select_plan(buff_pool, access_methods, sch_ma, *select_ast, schema_name);
             response_obj.query_type = SELECT_QUERY;
-            response_obj.results = results;
+            response_obj.results = planner::select_plan(buff_pool, access_methods, sch_ma, *select_ast, schema_name);
+            response_obj.schemas.emplace();
+            sch_ma.get_schema(response_obj.schemas.value());
         }
     }
 
@@ -108,33 +107,42 @@ void TUI_Pipeline(schema::schema_manager &sch_ma, parser::Parser &parser, buffer
     }
 
     if (res.results.has_value()) {
-        for (std::unique_ptr<Table> &tb : st.table) {
-            if (tb->component_id == "display_table") {
-                tb->divisions = res.results.value().size();
+        int table_idx = 0;
+        for (int i = 0; i < st.table.size(); i++) {
+            if (st.table[i]->component_id == "display_table") {
+                st.table[i]->divisions = res.results.value().size();
+                table_idx = i;
+                break;
             }
         }
-
         int parent_selected = st.accordion[accord_idx]->which_selected;
         int child_selected = st.accordion[accord_idx]->entry[parent_selected].sub_child_selected;
+
+        // remember to resize according to res.results (number of col) after setting divisions
+        st.table[table_idx]->divisions = res.results.value().size();
+        int num_cols = res.schemas.value()[parent_selected].tables[child_selected].columns.size();
+        st.table[table_idx]->rows.assign(res.results.value().size(), std::vector<std::string>(num_cols, " "));
+        st.table[table_idx]->headers.assign(num_cols, " ");
+
         int h = 0;
+
         for (h = 0; h < res.schemas.value()[parent_selected].tables[child_selected].columns.size(); h++) {
-            if (st.table[h]->component_id == "display_table") {
-                st.table[h]->fill_headers(res.schemas.value()[parent_selected].tables[child_selected].columns[h].column_name, h);
-            }
+            st.table[table_idx]->fill_headers(res.schemas.value()[parent_selected].tables[child_selected].columns[h].column_name, h);
         }
 
-        for (int r = 0; r < res.results->size(); r++) {
+        for (int r = 0; r < res.results.value().size(); r++) {
+            write(STDOUT_FILENO, "hi", 2);
             for (int v = 0; v < res.results.value()[r].row.size(); v++) {
                 std::visit(
                         [&](auto &&val) {
                             using T = std::decay_t<decltype(val)>;
 
                             if constexpr (std::is_same_v<int, T>) {
-                                st.table[h]->fill_rows(std::to_string(val), r, v);
+                                st.table[table_idx]->fill_rows(std::to_string(val), r, v);
                             } else if constexpr (std::is_same_v<std::string, T>) {
-                                st.table[h]->fill_rows(val, r, v);
+                                st.table[table_idx]->fill_rows(val, r, v);
                             } else if constexpr (std::is_same_v<float, T>) {
-                                st.table[h]->fill_rows(std::to_string(val), r, v);
+                                st.table[table_idx]->fill_rows(std::to_string(val), r, v);
                             }
                         },
                         (res.results.value()[r].row[v]));
@@ -176,7 +184,7 @@ int main() {
                  2,      // row
                  140,    // width
                  38 - 3, // height
-                 3, 3, RED, "display_table");
+                 1, 3, RED, "display_table");
 
     // --- Accordion (right side)
     Accordion acc1(screen,
@@ -184,7 +192,7 @@ int main() {
                    2,           // row
                    43,          // width
                    38,          // height
-                   2, RED, "schema_display");
+                   3, RED, "schema_display");
     InputHandlers::Events events = {};
 
     Structure st;

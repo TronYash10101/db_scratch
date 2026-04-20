@@ -6,7 +6,7 @@
 #include <vector>
 
 int main(int argc, char **argv) {
-    std::filesystem::path filepath = "/home/yash-jadhav/db_scratch/catalog_manager/schema_file.bin";
+    /* std::filesystem::path filepath = "/home/yash-jadhav/db_scratch/catalog_manager/schema_file.bin";
 
     int mode = std::stoi(argv[1]);
     if (mode == 1) {
@@ -21,5 +21,5 @@ int main(int argc, char **argv) {
 
     // schema_manager.iterate_catalog();
     //
-    table_match.value();
+    table_match.value(); */
 }

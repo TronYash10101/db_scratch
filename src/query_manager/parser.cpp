@@ -77,7 +77,7 @@ parser_types::Predicate parser::Parser::parse_where_clause(parser::token_iterato
 // revise this, for now works
 parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_iterator &tok_it, schema::schema_manager &schema_manager,
                                                              std::string &schema_name) {
-    std::vector<std::string> raw_col_buffer; // Temporary buffer for names found before FROM
+    std::vector<std::string> raw_col_buffer;
     parser_types::SELECT_AST ast;
 
     while (tok_it.has_next()) {
@@ -86,46 +86,45 @@ parser_types::SELECT_AST parser::Parser::parse_select_clause(parser::token_itera
         if (sub_tok.token_value == "WHERE") {
             ast.predicate = parse_where_clause(tok_it);
             continue;
-        }
-
-        // Handle the Column List and the FROM clause inside this block
-        else {
+        } else {
             while (true) {
-                // 1. Handle FROM Clause (Crucial: This sets the context for validation)
                 if (sub_tok.token_value == "FROM") {
                     ast.table_name = parse_from_clause(tok_it, schema_manager, schema_name);
 
-                    // NOW Validate everything we found so far
                     for (const std::string &name : raw_col_buffer) {
-                        auto found = schema_manager.entity_find(schema::COLUMN, name, ast.table_name, schema_name);
-                        if (found.has_value() && !found->empty()) {
-                            for (const auto &ele : found.value()) {
-                                if (auto *ptr = std::get_if<schema::col_attrs>(&ele)) {
-                                    ast.cols_name.push_back(ptr->column_name);
+                        if (name == "*") {
+                            auto table_find = schema_manager.entity_find(schema::TABLE, ast.table_name, schema_name);
+                            if (table_find.has_value()) {
+                                if (auto *tptr = std::get_if<schema::tables_attrs>(&table_find.value()[0])) {
+                                    for (const auto &col : tptr->columns) {
+                                        ast.cols_name.push_back(col.column_name);
+                                    }
                                 }
                             }
                         } else {
-                            throw std::runtime_error("COLUMN '" + name + "' NOT FOUND IN TABLE " + ast.table_name);
+                            auto found = schema_manager.entity_find(schema::COLUMN, name, ast.table_name, schema_name);
+                            if (found.has_value() && !found->empty()) {
+                                for (const auto &ele : found.value()) {
+                                    if (auto *ptr = std::get_if<schema::col_attrs>(&ele)) {
+                                        ast.cols_name.push_back(ptr->column_name);
+                                    }
+                                }
+                            } else {
+                                throw std::runtime_error("COLUMN '" + name + "' NOT FOUND IN TABLE " + ast.table_name);
+                            }
                         }
                     }
-                    raw_col_buffer.clear(); // Buffer processed
-                }
+                    raw_col_buffer.clear();
 
-                // 2. Collect Column Identifiers or Wildcards
-                else if (sub_tok.token_type == lexer_types::IDENT || sub_tok.token_value == "*") {
+                } else if (sub_tok.token_type == lexer_types::IDENT || sub_tok.token_value == "*") {
                     raw_col_buffer.push_back(sub_tok.token_value);
-                }
 
-                // 3. Handle Commas (Just skip them)
-                else if (sub_tok.token_value == "," && sub_tok.token_type == lexer_types::OPERATOR) {
-                    // Expect next token to be IDENT or *
+                } else if (sub_tok.token_value == "," && sub_tok.token_type == lexer_types::OPERATOR) {
                     if (tok_it.peek(1).token_type != lexer_types::IDENT && tok_it.peek(1).token_value != "*") {
                         throw std::runtime_error("EXPECTED IDENTIFIER AFTER ','");
                     }
                 }
 
-                // 4. Look ahead to see if we should continue this inner loop
-                // Stop if the next token is WHERE or if we have no more tokens
                 if (!tok_it.has_next() || tok_it.peek(1).token_value == "WHERE") {
                     break;
                 }
