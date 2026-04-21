@@ -85,9 +85,6 @@ void TUI_Pipeline(schema::schema_manager &sch_ma, parser::Parser &parser, buffer
     input = Request{};
     // input.text_box_input = input_text;
 
-    if (first_load) {
-    }
-
     for (std::unique_ptr<TextBox> &textbox : st.textbox) {
         if (textbox->component_id == "query_input") {
             input.text_box_input = textbox->get_inner_text();
@@ -111,10 +108,7 @@ void TUI_Pipeline(schema::schema_manager &sch_ma, parser::Parser &parser, buffer
                 for (int i = 0; i < res.schemas.value().size(); i++) {
                     st.accordion[accord_idx]->fill_entry(res.schemas.value()[i].schema_name, i);
                     for (int j = 0; j < res.schemas.value()[i].tables.size(); j++) {
-                        if (st.accordion[accord_idx]->entry[i].sub_childs_lookup.find(res.schemas.value()[i].tables[j].table_name) ==
-                            st.accordion[accord_idx]->entry[i].sub_childs_lookup.end()) {
-                            st.accordion[accord_idx]->fill_childs(res.schemas.value()[i].tables[j].table_name, i);
-                        }
+                        st.accordion[accord_idx]->fill_childs(res.schemas.value()[i].tables[j].table_name, i);
                     }
                 }
                 break;
@@ -266,5 +260,6 @@ int main() {
 
         events = {};
     }
+    write(STDOUT_FILENO, "\033[?25h", 6);
     return 0;
 }

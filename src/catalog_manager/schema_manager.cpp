@@ -36,7 +36,9 @@ void schema::schema_manager::schema_create_table(const std::string &schema_name,
         throw std::runtime_error("NO SCHEMA FOUND");
     } */
     for (schema_attr &ele : schema_catalog) {
-        ele.tables.push_back(table_attr);
+        if (ele.schema_name == schema_name) {
+            ele.tables.push_back(table_attr);
+        }
     }
 }
 

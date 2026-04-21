@@ -162,6 +162,14 @@ class schema_manager {
             schemas.push_back({schema.schema_name, tb});
         }
     }
+    void iterate_catalog() {
+        for (schema_attr &sch : schema_catalog) {
+            std::cout << "Schema : " << sch.schema_name << "\n";
+            for (tables_attrs &t : sch.tables) {
+                std::cout << "Table : " << t.table_name << "\n";
+            }
+        }
+    }
 
     ~schema_manager() {
         // write schema here, before closing file

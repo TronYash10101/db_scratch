@@ -143,7 +143,7 @@ class Accordion : public Component {
         : box(col, row, width, height, color), screen(screen), entry_gap(entry_gap), default_color(color) {
         behavior = SUPPORTS_MOUSE | SUPPORTS_NAVIGATION;
         component_id = id;
-        entry.resize(10, {});
+        // entry.reserve(10);
         component_col = col;
         component_row = row;
         component_width = width;
@@ -155,7 +155,7 @@ class Accordion : public Component {
         size_t off = entry_gap;
         for (int i = 0; i < entry.size(); i++) {
             COLOR pcolor = default_color;
-            if (which_selected >= 0 && i == which_selected) {
+            if (i == which_selected) {
                 pcolor = CYAN;
             }
             Base_Element::Text parent(component_col + 4, component_row + off, component_width - 4, pcolor);
@@ -177,10 +177,16 @@ class Accordion : public Component {
             off += (k + 1) + 1;
         }
     }
-    void fill_entry(std::string value, int idx) { entry[idx].name = value; }
+    void fill_entry(std::string value, int idx) {
+        if (idx >= entry.size()) {
+            entry.resize(idx + 1);
+        }
+        entry[idx].name = value;
+    }
     void fill_childs(std::string value, int parent_idx) {
-        entry[parent_idx].sub_childs.push_back(value);
-        entry[parent_idx].sub_childs_lookup.insert(value);
+        if (entry[parent_idx].sub_childs_lookup.insert(value).second) {
+            entry[parent_idx].sub_childs.push_back(value);
+        }
     }
 };
 #endif
