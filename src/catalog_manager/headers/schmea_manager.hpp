@@ -4,12 +4,14 @@
 #include "../../query_manager/headers/types.hpp"
 #include <cstddef>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <unistd.h>
 #include <variant>
 #include <vector>
 
@@ -164,7 +166,8 @@ class schema_manager {
     ~schema_manager() {
         // write schema here, before closing file
         serialize();
-        std::cout << "SCHEMA FILE WRITTEN";
+        std::string message = "\nSCHEMA FILE WRITTEN\n";
+        write(STDOUT_FILENO, message.data(), message.size());
         fclose(schmea_file);
         fflush(schmea_file);
     }

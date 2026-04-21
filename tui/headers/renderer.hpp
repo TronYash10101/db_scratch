@@ -42,11 +42,10 @@ class Screen {
         }
         original_term = raw_term;
 
-        raw_term.c_lflag &= ~(ICANON | ECHO | IEXTEN);
+        raw_term.c_lflag &= ~(ICANON | ECHO | IEXTEN | ISIG);
         raw_term.c_iflag &= ~(IXON | ICRNL);
         raw_term.c_oflag &= ~(OPOST);
-
-        raw_term.c_cc[VMIN] = 1; // is blocking, add poll later on STDIN
+        raw_term.c_cc[VMIN] = 1;
         raw_term.c_cc[VTIME] = 0;
 
         if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw_term) < 0) {
@@ -94,7 +93,12 @@ class Screen {
     void Render();
     void reset_region(int col, int row, int width, int height, Style style);
 
-    ~Screen() { reset_raw_mode(); }
+    ~Screen() {
+        std::string message = "\nReset to canonical mode\n";
+        write(STDOUT_FILENO, message.data(), message.size());
+        write(STDOUT_FILENO, "\033[?25h", 6);
+        reset_raw_mode();
+    }
 };
 
 } // namespace Renderer

@@ -35,12 +35,19 @@ void InputHandlers::Stdin_Handler::navigation_handle(Events &events) {
     }
 
     if (Accordion *ptr = dynamic_cast<Accordion *>(active_component)) {
-        if (dir_key == 'A' && ptr->which_selected != 0) {
-            ptr->which_selected -= 1;
-        } else if (dir_key == 'B' && ptr->which_selected < ptr->entry.size()) {
-            ptr->which_selected += 1;
-        } else if (ptr->which_selected < 0) {
-            ptr->which_selected = 0;
+        if (dir_key == 'A') {
+            if (ptr->entry[ptr->which_selected].is_expanded && ptr->entry[ptr->which_selected].sub_child_selected != 0) {
+                ptr->entry[ptr->which_selected].sub_child_selected -= 1;
+            } else if (!ptr->entry[ptr->which_selected].is_expanded) {
+                ptr->which_selected -= 1;
+            }
+        } else if (dir_key == 'B') {
+            if (ptr->entry[ptr->which_selected].is_expanded &&
+                ptr->entry[ptr->which_selected].sub_child_selected != ptr->entry[ptr->which_selected].sub_childs.size() - 1) {
+                ptr->entry[ptr->which_selected].sub_child_selected += 1;
+            } else if (!ptr->entry[ptr->which_selected].is_expanded) {
+                ptr->which_selected += 1;
+            }
         } else if (dir_key == '\n' || dir_key == '\r') {
             ptr->entry[ptr->which_selected].is_expanded = !ptr->entry[ptr->which_selected].is_expanded;
         }

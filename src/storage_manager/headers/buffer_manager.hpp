@@ -14,6 +14,8 @@
 #include <queue>
 #include <stdexcept>
 #include <stdio.h>
+#include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <vector>
 
@@ -59,7 +61,11 @@ class buffer_pool {
 
     void final_write();
 
-    ~buffer_pool() { final_write(); }
+    ~buffer_pool() {
+        std::string message = "\nHeap Page written\n";
+        write(STDOUT_FILENO, message.data(), message.size());
+        final_write();
+    }
 };
 }; // namespace buffer_manager
 

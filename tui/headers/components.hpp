@@ -165,7 +165,7 @@ class Accordion : public Component {
             if (entry[i].is_expanded) {
                 while (k < entry[i].sub_childs.size()) {
                     COLOR ccolor = default_color;
-                    if (entry[i].sub_child_selected) {
+                    if (entry[i].sub_child_selected == k) {
                         ccolor = MAGENTA;
                     }
                     Base_Element::Text child(component_col + 4, component_row + off + (k + 1), component_width - 4, ccolor);

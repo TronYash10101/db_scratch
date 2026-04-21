@@ -9,15 +9,17 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <poll.h>
 #include <stdexcept>
 #include <string>
+#include <sys/poll.h>
 #include <termios.h>
 #include <type_traits>
 #include <unistd.h>
 #include <variant>
 #include <vector>
 
-enum RESPONSE_TYPE { SELECT_QUERY, INSERT_QUERY, CREATE_TABLE_QUERY, CREATE_SCHEMA_QUERY };
+enum RESPONSE_TYPE { FIRST_LOAD, SELECT_QUERY, INSERT_QUERY, CREATE_TABLE_QUERY, CREATE_SCHEMA_QUERY };
 struct Request {
     std::string text_box_input;
 };
@@ -29,10 +31,18 @@ struct Response {
 };
 
 Response DB_Pipeline(std::string schema_name, schema::schema_manager &sch_ma, parser::Parser &parser,
-                     buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods, Request &input) {
+                     buffer_manager::buffer_pool &buff_pool, access_methods::Access_methods &access_methods, Request &input,
+                     bool first_load) {
 
     Response response_obj = {};
     index_write::root_struct curr_root = {};
+
+    if (first_load) {
+        response_obj.query_type = FIRST_LOAD;
+        response_obj.schemas.emplace();
+        sch_ma.get_schema(response_obj.schemas.value());
+        return response_obj;
+    }
 
     parser::token_iterator tok_it(input.text_box_input);
     parser_types::ASTResult ast = parser.grammer_check(tok_it, sch_ma, schema_name);
@@ -69,11 +79,14 @@ Response DB_Pipeline(std::string schema_name, schema::schema_manager &sch_ma, pa
 }
 
 void TUI_Pipeline(schema::schema_manager &sch_ma, parser::Parser &parser, buffer_manager::buffer_pool &buff_pool,
-                  access_methods::Access_methods &access_methods, Structure &st) {
+                  access_methods::Access_methods &access_methods, Structure &st, bool first_load) {
 
     Request input;
     input = Request{};
     // input.text_box_input = input_text;
+
+    if (first_load) {
+    }
 
     for (std::unique_ptr<TextBox> &textbox : st.textbox) {
         if (textbox->component_id == "query_input") {
@@ -90,7 +103,7 @@ void TUI_Pipeline(schema::schema_manager &sch_ma, parser::Parser &parser, buffer
         }
     }
 
-    Response res = DB_Pipeline(curr_active_schema, sch_ma, parser, buff_pool, access_methods, input);
+    Response res = DB_Pipeline(curr_active_schema, sch_ma, parser, buff_pool, access_methods, input, first_load);
     int accord_idx = 0;
     if (res.schemas.has_value()) {
         for (accord_idx = 0; accord_idx < st.accordion.size(); accord_idx++) {
@@ -122,7 +135,7 @@ void TUI_Pipeline(schema::schema_manager &sch_ma, parser::Parser &parser, buffer
         int child_selected = st.accordion[accord_idx]->entry[parent_selected].sub_child_selected;
 
         // remember to resize according to res.results (number of col) after setting divisions
-        st.table[table_idx]->divisions = res.results.value().size();
+        st.table[table_idx]->divisions = res.schemas.value()[parent_selected].tables[child_selected].columns.size();
         int num_cols = res.schemas.value()[parent_selected].tables[child_selected].columns.size();
         st.table[table_idx]->rows.assign(res.results.value().size(), std::vector<std::string>(num_cols, " "));
         st.table[table_idx]->headers.assign(num_cols, " ");
@@ -165,12 +178,11 @@ int main() {
     file2.close();
     file3.close();
 
-    buffer_manager::buffer_pool buff_pool(index_filepath, heap_filepath);
+    Renderer::Screen screen;
+    buffer_manager::buffer_pool buff_pool(heap_filepath, index_filepath);
     access_methods::Access_methods access_methods;
     schema::schema_manager sch_ma(schema_filepath);
     parser::Parser parser;
-
-    Renderer::Screen screen;
 
     // --- TextBox (top-left)
     TextBox textbox1(screen,
@@ -212,31 +224,47 @@ int main() {
     char in;
     write(STDOUT_FILENO, "\033[?25l", 6);
     write(STDOUT_FILENO, "\033[2J\033[H", 7);
+
+    TUI_Pipeline(sch_ma, parser, buff_pool, access_methods, st, true);
+    struct pollfd stdin_poll = {STDIN_FILENO, POLLIN, 0};
+
+    // can later have more (note this contains pointers to structs of pollfd)
+    size_t nfds = 1;
+    struct pollfd poll_table[nfds];
+    poll_table[0] = stdin_poll;
+
     while (1) {
-        screen.reset_region(1, 1, screen.max_cols - 1, screen.max_rows - 1, {});
-        int bytes_read = read(STDIN_FILENO, &in, 1);
+        int ready_fds = poll(poll_table, nfds, 16);
 
-        if (bytes_read <= 0)
-            continue;
-        if (in == 3) {
-            /* termios s;
-            s.c_lflag &= (ICANON);
-            tcsetattr(STDIN_FILENO, TCSAFLUSH, &s);
-            write(STDIN_FILENO, "\033[?1000l\033[?1006l", 16);
-            kill(getpid(), SIGINT); */
-            break;
-        }
-        input_handler.read(in, events);
+        if (ready_fds > 0) {
+            for (int fd = 0; fd < nfds; fd++) {
+                if (poll_table[fd].revents & POLLIN) {
 
-        if (events.SUBMIT) {
-            TUI_Pipeline(sch_ma, parser, buff_pool, access_methods, st);
+                    screen.reset_region(1, 1, screen.max_cols - 1, screen.max_rows - 1, {});
+
+                    int bytes_read = read(STDIN_FILENO, &in, 1);
+                    if (bytes_read <= 0)
+                        continue;
+
+                    if (in == 3)
+                        return 0;
+
+                    input_handler.read(in, events);
+
+                    if (events.SUBMIT) {
+                        TUI_Pipeline(sch_ma, parser, buff_pool, access_methods, st, false);
+                    }
+                }
+            }
+        } else if (ready_fds < 0) {
+            throw std::runtime_error("SOME ERROR IN MAIN LOOP");
         }
 
         st.draw_structure();
         write(STDOUT_FILENO, "\033[H", 3);
         screen.Render();
+
         events = {};
     }
-    write(STDOUT_FILENO, "\033[?25h", 6);
     return 0;
 }
