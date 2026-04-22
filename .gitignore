@@ -6,8 +6,12 @@ gdb_output.txt
 gist_control/
 build/
 notes/
+.git/
 tui/tests/test_bins/
 g.txt
 **/**/core
 **/**/**.o
 **/**/\\
+build.sh
+run.sh
+.dockerignore
