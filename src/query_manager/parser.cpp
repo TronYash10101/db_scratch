@@ -156,8 +156,6 @@ void parser::Parser::parse_into_clause(parser::token_iterator &tok_it, parser_ty
 
     lexer_types::Token next_tok = tok_it.peek(1);
 
-    // handle the case where order of columns is not given in which case default schema has to be followed
-
     if (next_tok.token_value == "(" && next_tok.token_type == lexer_types::OPERATOR) {
         sub_tok = tok_it.get_next();
         while (sub_tok.token_value != ")") {
@@ -192,22 +190,32 @@ void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_t
         access_methods_types::row_t this_row;
 
         int i = 0;
+        std::optional<std::vector<schema::ENTITY_TYPE>> ast_table = schema_manager.entity_find(schema::TABLE, ast.table_name, schema_name);
+
+        schema::tables_attrs *t_pt;
+        if (ast_table.has_value()) {
+            t_pt = std::get_if<schema::tables_attrs>(&ast_table.value()[0]);
+            this_row.row.resize(t_pt->columns.size());
+        }
+
         while (sub_tok.token_value != ")") {
             sub_tok = tok_it.get_next();
             if (sub_tok.token_type == lexer_types::IDENT) {
-                std::optional<std::vector<schema::ENTITY_TYPE>> ast_table =
-                        schema_manager.entity_find(schema::TABLE, ast.table_name, schema_name);
+
                 std::optional<std::vector<schema::ENTITY_TYPE>> ast_col =
                         schema_manager.entity_find(schema::COLUMN, ast.cols_name[i], ast.table_name, schema_name);
 
                 // some optimization look into that
-                if (ast_col.has_value() && ast_table.has_value()) {
+                if (ast_col.has_value()) {
+
                     if (auto *pt = std::get_if<schema::col_attrs>(&ast_col.value()[0])) {
+
                         if (pt->col_type_match(pt->column_type, sub_tok.token_value)) {
+
                             if (auto *t_pt = std::get_if<schema::tables_attrs>(&ast_table.value()[0])) {
                                 for (int k = 0; k < t_pt->columns.size(); k++) {
                                     if (pt->column_name == t_pt->columns[k].column_name) {
-                                        this_row.row.push_back(convert_correct_type(sub_tok.token_value, pt->column_type));
+                                        this_row.row[k] = convert_correct_type(sub_tok.token_value, pt->column_type);
                                     }
                                 }
                             }
@@ -220,7 +228,6 @@ void parser::Parser::parse_value_clause(parser::token_iterator &tok_it, parser_t
             }
         }
         ast.values.push_back(this_row);
-        // follows default schema order when not provided and now, but should also work for some order
     } else if (tok_it.get_prev().token_value == "(") {
         throw std::runtime_error("EXPECTED ( AFTER VALUES");
     }
