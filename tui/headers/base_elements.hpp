@@ -68,31 +68,40 @@ class Text : public Element {
 
   public:
     Style style;
+    Style cursor_style;
     size_t max_text_width;
+    bool has_cursor = false;
     size_t view_offset;
-    Text(int col, int row, size_t max_text_width, COLOR color, size_t font_size = 0)
-        : style(TEXT, color), inner_text(""), max_text_width(max_text_width), view_offset(0) {
+    Text(int col, int row, size_t max_text_width, COLOR color, bool has_cursor, size_t font_size = 0)
+        : style(TEXT, color), inner_text(""), max_text_width(max_text_width), view_offset(0), has_cursor(has_cursor) {
         // font size is currently not supported
         Element::col = col;
         Element::row = row;
+        cursor_style.bg_color = WHITE;
     }
 
     void draw(Renderer::Screen &screen) override {
         size_t len = inner_text.size();
-
         if (len > max_text_width) {
             view_offset = len % max_text_width;
-            if (view_offset == 0) {
+            if (view_offset == 0)
                 view_offset = max_text_width;
-            }
             view_offset = len - view_offset;
         }
+
         for (size_t c = 0; c < max_text_width; c++) {
             if (c + view_offset < len) {
                 screen.at(std::string(1, inner_text[c + view_offset]), style, row, col + c);
-            } /* else {
-                screen.at(" ", style, row, col);
-            } */
+            }
+        }
+
+        // draw cursor after last character
+        if (has_cursor) {
+            size_t cursor_pos = len - view_offset; // position within visible window
+            if (cursor_pos < max_text_width) {
+                std::string cursor_char = (cursor_pos < len) ? std::string(1, inner_text[view_offset + cursor_pos]) : " ";
+                screen.at(cursor_char, cursor_style, row, col + cursor_pos);
+            }
         }
     }
     std::string get_inner_text() const { return inner_text; }

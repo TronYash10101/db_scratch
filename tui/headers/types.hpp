@@ -8,11 +8,17 @@ enum COLOR {
     CYAN,
     MAGENTA,
 };
+enum BACKGROUND_COLOR {
+    WHITE,
+    TRANSPARENT,
+};
+
 enum BORDER_OUTLINE { PLAIN, DASHED, DOTTED };
 enum COMPONENT { TEXT, BOX, LINE };
 
 struct Style {
     COLOR color;
+    BACKGROUND_COLOR bg_color = TRANSPARENT;
     COMPONENT comp;
 
     union UniqueProp {

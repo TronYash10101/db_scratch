@@ -24,6 +24,11 @@ void Renderer::Screen::Render() {
                 out_buff += "\033[35m";
             }
 
+            // set bg
+            if (style.bg_color == WHITE) {
+                out_buff += "\033[47m";
+            }
+
             // set unique properties
             if (style.comp == TEXT) {
                 if (style.unique_prop.text.is_bold)

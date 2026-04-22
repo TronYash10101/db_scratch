@@ -45,7 +45,7 @@ class TextBox : public Component {
     Base_Element::Text text;
     Base_Element::Box box;
     TextBox(Renderer::Screen &screen, int box_row, int box_col, size_t box_height, size_t box_width, COLOR border_color, std::string id)
-        : screen(screen), text(box_col + 1, box_row + (box_height / 2), box_width, border_color),
+        : screen(screen), text(box_col + 1, box_row + (box_height / 2), box_width, border_color, true),
           box(box_col, box_row, box_width, box_height, border_color) {
         behavior = SUPPORTS_MOUSE | SUPPORTS_INPUT_TEXT;
         component_id = id;
@@ -104,14 +104,14 @@ class Table : public Component {
             temp_v_line.draw(screen);
         }
         for (int header = 0; header < headers.size(); header++) {
-            Base_Element::Text text(component_col + gap / 3 + (header * gap), component_row + (header_gap / 2), gap / 2, color);
+            Base_Element::Text text(component_col + gap / 3 + (header * gap), component_row + (header_gap / 2), gap / 2, color, false);
             text.set_inner_text(headers[header]);
             text.draw(screen);
         }
         for (int row = 0; row < rows.size(); row++) {
             for (int r_value = 0; r_value < rows[row].size(); r_value++) {
                 Base_Element::Text text(component_col + 2 + (r_value * gap),
-                                        component_row + header_gap + (row * header_gap) + (header_gap / 2), gap / 2, color);
+                                        component_row + header_gap + (row * header_gap) + (header_gap / 2), gap / 2, color, false);
                 text.set_inner_text(rows[row][r_value]);
                 text.draw(screen);
             }
@@ -158,7 +158,7 @@ class Accordion : public Component {
             if (i == which_selected) {
                 pcolor = CYAN;
             }
-            Base_Element::Text parent(component_col + 4, component_row + off, component_width - 4, pcolor);
+            Base_Element::Text parent(component_col + 4, component_row + off, component_width - 4, pcolor, false);
             parent.set_inner_text(entry[i].name);
             parent.draw(screen);
             int k = 0;
@@ -168,7 +168,7 @@ class Accordion : public Component {
                     if (entry[i].sub_child_selected == k) {
                         ccolor = MAGENTA;
                     }
-                    Base_Element::Text child(component_col + 4, component_row + off + (k + 1), component_width - 4, ccolor);
+                    Base_Element::Text child(component_col + 4, component_row + off + (k + 1), component_width - 4, ccolor, false);
                     child.set_inner_text("   " + entry[i].sub_childs[k]);
                     child.draw(screen);
                     k++;
