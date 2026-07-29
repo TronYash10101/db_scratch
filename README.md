@@ -1,6 +1,11 @@
-This is a simple single-threaded database built for learning purpose, but in future going to be more mature database.
+A single-threaded relational database written in C++ to explore database internals from storage to query execution.
 
-The next goal is to implement WAL and support more SQL quires (like `JOINS` etc), further this database will contains features inspired from valkey.
+Database Implements:
+
+- The database implements buffer pool manager for maintaining pages from db file into memory.
+- It also supports heap scan and index scan (B+ Tree).
+- It has lexer and parser for parsing SQL queries and checking grammar.
+- A query planner creating a plan for execution and executor executing the plan in a volcano iterator style.
 
 It supports basic operations such as:
 - Creating schemas
@@ -11,6 +16,8 @@ Supported data types:
 - INT
 - STRING
 - FLOAT
+
+The next goal is to implement WAL and support more SQL quires (like `JOINS` etc).
 
 ---
 
