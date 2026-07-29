@@ -1,4 +1,6 @@
-This is a simple single-threaded database built for learning purposes.
+This is a simple single-threaded database built for learning purpose, but in future going to be more mature database.
+
+The next goal is to implement WAL and support more SQL quires (like `JOINS` etc), further this database will contains features inspired from valkey.
 
 It supports basic operations such as:
 - Creating schemas
@@ -49,9 +51,3 @@ Inside the container:
 - If you modify the source code, rebuild the image:
 
     docker build -t db_scratch .
-
----
-
-## CMake
-
-Uses a basic CMake setup for building the project.
