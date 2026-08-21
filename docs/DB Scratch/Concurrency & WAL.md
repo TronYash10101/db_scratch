@@ -12,4 +12,27 @@ Serializability can be implemented via *2PL, MVCC, OCC*:
 - MVCC : Does not use locks, but use state of database to ensure consistency.
 - OCC : Does not use locks or states, ensures safety by rolling back operations causing harm.
 
+##### Locking and Latching
+
+Every lock is associated with a transaction.
+
+Every lock comes in a different modes.
+
+Hierarchical locking allows single lock to be used on table as well as on each row.
+
+Lock Manager supports 2 calls:
+- lock (lockname, id, mode)
+- remove_transaction (id)
+
+There is no need for different unlock, remove transaction does that, but sql allows for lower degree of transaction so it might be needed.
+
+There is also lock_upgrade to upgrade lock without re-locking and condtion_lock telling if lock was acquired, if not then calling thread in not queued.
+
+To support above calls lock manager maintains 2 DS:
+
+- Global Lock Table : Handles locks on rows, etc.
+- Transaction Table : 
+- Deadlock detector :  
+
+
 
